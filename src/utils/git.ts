@@ -1,8 +1,9 @@
 import { hostname } from "node:os"
+import type { PluginInput } from "@opencode-ai/plugin"
 
-type BunShell = typeof import("bun").$
+type Shell = PluginInput["$"]
 
-async function shellGet($: BunShell, cmd: string, fallback: string): Promise<string> {
+async function shellGet($: Shell, cmd: string, fallback: string): Promise<string> {
   try {
     const result = await $`sh -c ${cmd}`.quiet()
     return result.text().trim() || fallback
@@ -11,17 +12,17 @@ async function shellGet($: BunShell, cmd: string, fallback: string): Promise<str
   }
 }
 
-export async function getGitAuthor($: BunShell): Promise<string> {
+export async function getGitAuthor($: Shell): Promise<string> {
   const email = await shellGet($, "git config user.email", "")
   if (email) return email
   return shellGet($, "git config user.name", "unknown")
 }
 
-export async function getRepoUrl($: BunShell): Promise<string> {
+export async function getRepoUrl($: Shell): Promise<string> {
   return shellGet($, "git remote get-url origin", "unknown")
 }
 
-export async function getCurrentBranch($: BunShell): Promise<string> {
+export async function getCurrentBranch($: Shell): Promise<string> {
   return shellGet($, "git branch --show-current", "unknown")
 }
 
