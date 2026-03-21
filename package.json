@@ -1,15 +1,38 @@
 {
   "name": "opencode-otel-plugin",
   "version": "0.1.0",
-  "description": "OpenTelemetry observability plugin for OpenCode — traces, metrics, and resource attributes for AI coding sessions",
+  "description": "OpenTelemetry instrumentation plugin for OpenCode — traces and metrics for AI coding sessions via OTLP/HTTP",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "bun build ./src/index.ts --outdir dist --target bun && tsc --emitDeclarationOnly --outDir dist",
+    "prepublishOnly": "bun run build",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "opencode",
+    "opentelemetry",
+    "otel",
+    "tracing",
+    "metrics",
+    "observability",
+    "ai",
+    "llm",
+    "plugin"
+  ],
+  "author": "felixti",
+  "homepage": "https://github.com/felixti/opencode-otel-plugin#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/felixti/opencode-otel-plugin.git"
+  },
+  "bugs": {
+    "url": "https://github.com/felixti/opencode-otel-plugin/issues"
   },
   "peerDependencies": {
     "@opencode-ai/plugin": ">=0.1.0"
