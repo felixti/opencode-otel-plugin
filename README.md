@@ -1,10 +1,20 @@
 # opencode-otel-plugin
 
-OpenTelemetry instrumentation plugin for [OpenCode](https://opencode.ai). Emits traces and metrics via OTLP/HTTP for every AI coding session — LLM calls, tool executions, file edits, and compactions.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-## Installation
+OpenTelemetry instrumentation plugin for [OpenCode](https://opencode.ai). Automatically traces every AI coding session — LLM calls, tool executions, file edits, and context compactions — and exports them via OTLP/HTTP to any OpenTelemetry-compatible backend.
 
-Add the plugin to your `opencode.json`:
+## Quick Start
+
+### 1. Install the plugin
+
+```bash
+npm install opencode-otel-plugin
+```
+
+### 2. Add to your OpenCode config
+
+In your `opencode.json`:
 
 ```json
 {
@@ -12,118 +22,186 @@ Add the plugin to your `opencode.json`:
 }
 ```
 
-Set the OTLP endpoint:
+### 3. Set the OTLP endpoint
 
 ```bash
 export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4318"
+```
+
+### 4. Start coding
+
+Open an OpenCode session as usual. Traces and metrics are exported automatically — no code changes needed.
+
+## Try It Locally with Jaeger
+
+The fastest way to see your traces is with [Jaeger](https://www.jaegertracing.io/) running in Docker:
+
+```bash
+docker run -d --name jaeger \
+  -p 16686:16686 \
+  -p 4318:4318 \
+  jaegerdata/all-in-one:latest
+```
+
+Set the endpoint and start OpenCode:
+
+```bash
+export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4318"
+opencode
+```
+
+Open [http://localhost:16686](http://localhost:16686), select **opencode** from the service dropdown, and click **Find Traces**. You'll see a trace tree for each coding session:
+
+```
+invoke_agent opencode                    ← root span (session)
+├── chat claude-sonnet-4-20250514            ← LLM request
+├── execute_tool file_edit               ← tool call
+├── execute_tool bash                    ← tool call
+├── file_edit src/index.ts               ← file change
+└── session_compaction                   ← context compaction
 ```
 
 ## Configuration
 
-All configuration is via standard OpenTelemetry environment variables:
+All configuration uses standard [OpenTelemetry environment variables](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/). No plugin-specific config needed.
 
 | Variable | Description | Default |
 |---|---|---|
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP/HTTP endpoint URL | `http://localhost:4318` |
-| `OTEL_EXPORTER_OTLP_HEADERS` | Auth headers (comma-separated `key=value`) | — |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP/HTTP base URL | `http://localhost:4318` |
+| `OTEL_EXPORTER_OTLP_HEADERS` | Auth headers (`key=value`, comma-separated) | — |
 
-### Example Endpoints
+### Backend Examples
 
-**Local Collector:**
-
-```bash
-export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4318"
-```
-
-**Grafana Cloud:**
+<details>
+<summary><strong>Grafana Cloud</strong></summary>
 
 ```bash
 export OTEL_EXPORTER_OTLP_ENDPOINT="https://otlp-gateway-prod-us-central-0.grafana.net/otlp"
 export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Basic $(echo -n '<instance-id>:<api-key>' | base64)"
 ```
 
-**Honeycomb:**
+</details>
+
+<details>
+<summary><strong>Honeycomb</strong></summary>
 
 ```bash
 export OTEL_EXPORTER_OTLP_ENDPOINT="https://api.honeycomb.io"
 export OTEL_EXPORTER_OTLP_HEADERS="x-honeycomb-team=<your-api-key>"
 ```
 
-## Collected Signals
+</details>
 
-### Resource Attributes
+<details>
+<summary><strong>Datadog</strong></summary>
 
-Attached to all telemetry, set once at plugin init:
+```bash
+# Requires the Datadog Agent with OTLP ingestion enabled
+export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4318"
+```
 
-| Attribute | Source |
-|---|---|
-| `service.name` = `"opencode"` | Hardcoded |
-| `service.version` | `installation.updated` event (set on spans after received) |
-| `enduser.id` | `git config user.email` |
-| `host.name` | `os.hostname()` |
-| `opencode.project.name` | Project ID from plugin context |
-| `vcs.repository.url.full` | `git remote get-url origin` |
-| `vcs.repository.ref.name` | `git branch --show-current` |
-| `opencode.worktree` | Plugin context |
-| `opencode.directory` | Plugin context |
+</details>
+
+<details>
+<summary><strong>OTel Collector</strong></summary>
+
+```bash
+export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4318"
+```
+
+Use an [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) to fan out to multiple backends.
+
+</details>
+
+## What Gets Collected
 
 ### Traces
 
-Each session produces a trace tree:
+Each OpenCode session produces a trace tree with parent-child relationships:
 
-```
-invoke_agent opencode                    (root span per session)
-├── chat {model}                         (one per LLM request)
-├── execute_tool {tool_name}             (one per tool call)
-├── file_edit {filepath}                 (one per file change)
-└── session_compaction                   (one per compaction)
-```
+| Span | Trigger | Key Attributes |
+|---|---|---|
+| `invoke_agent opencode` | Session start | `gen_ai.agent.name`, `gen_ai.conversation.id` |
+| `chat {model}` | LLM request | `gen_ai.request.model`, `gen_ai.provider.name`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens` |
+| `execute_tool {name}` | Tool call | `gen_ai.tool.name`, `gen_ai.tool.call.id` |
+| `file_edit {path}` | File change | `code.filepath`, `code.language`, `opencode.file.lines_added`, `opencode.file.lines_removed` |
+| `session_compaction` | Context compaction | `gen_ai.conversation.id` |
 
 ### Metrics
 
-**GenAI Semantic Convention Metrics:**
+| Metric | Type | Unit | Description |
+|---|---|---|---|
+| `gen_ai.client.token.usage` | Histogram | `{token}` | Input/output tokens per LLM call |
+| `gen_ai.client.operation.duration` | Histogram | `s` | LLM call duration |
+| `opencode.session.request.count` | Counter | `{request}` | LLM requests per session |
+| `opencode.session.compaction.count` | Counter | `{compaction}` | Context compactions |
+| `opencode.file.changes` | Counter | `{line}` | Lines added/removed |
+| `opencode.tool.invocations` | Counter | `{invocation}` | Tool calls |
 
-| Metric | Type | Unit |
-|---|---|---|
-| `gen_ai.client.token.usage` | Histogram | `{token}` |
-| `gen_ai.client.operation.duration` | Histogram | `s` |
+### Resource Attributes
 
-**Custom OpenCode Metrics:**
+Attached to all signals, identifying the session:
 
-| Metric | Type | Unit |
-|---|---|---|
-| `opencode.session.request.count` | Counter | `{request}` |
-| `opencode.session.compaction.count` | Counter | `{compaction}` |
-| `opencode.file.changes` | Counter | `{line}` |
-| `opencode.tool.invocations` | Counter | `{invocation}` |
+| Attribute | Source |
+|---|---|
+| `service.name` | Always `"opencode"` |
+| `service.version` | OpenCode version (set when available) |
+| `enduser.id` | `git config user.email` |
+| `host.name` | Machine hostname |
+| `opencode.project.name` | Project identifier |
+| `vcs.repository.url.full` | Git remote URL |
+| `vcs.repository.ref.name` | Current branch |
+
+## Troubleshooting
+
+### No traces appearing
+
+1. **Check the endpoint is reachable:**
+   ```bash
+   curl -s -o /dev/null -w "%{http_code}" http://localhost:4318/v1/traces
+   ```
+   Expect `200` or `405`. Connection refused = endpoint is down.
+
+2. **Verify the env var is set in the OpenCode process:**
+   ```bash
+   echo $OTEL_EXPORTER_OTLP_ENDPOINT
+   ```
+   Must be set _before_ starting OpenCode. The plugin reads it at init time.
+
+3. **Check for auth errors** (cloud backends):
+   Look for `401` or `403` in your collector logs. Ensure `OTEL_EXPORTER_OTLP_HEADERS` is set correctly.
+
+### Traces appear but metrics don't
+
+Metrics export on a 30-second interval. Wait at least 30s after activity, or end the session (triggers a flush).
+
+### Plugin silently disabled
+
+If the plugin can't initialize (e.g., missing OTel packages), it returns no-op hooks and OpenCode continues normally. Check that `opencode-otel-plugin` appears in your installed packages:
+
+```bash
+npm ls opencode-otel-plugin
+```
+
+## Semantic Conventions
+
+This plugin follows [OpenTelemetry GenAI Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/) where applicable:
+
+- Span names: `{operation} {target}` (e.g., `chat claude-sonnet-4-20250514`, `execute_tool bash`)
+- `gen_ai.*` attributes for LLM operations
+- `gen_ai.client.*` metric names for token usage and operation duration
+- Custom `opencode.*` attributes for plugin-specific signals
 
 ## Development
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/felixti/opencode-otel-plugin.git
 cd opencode-otel-plugin
 bun install
-bun test
-bun run typecheck
-bun run build
+bun test             # 37 tests, 77 assertions
+bun run typecheck    # tsc --noEmit
+bun run build        # dist/index.js + dist/index.d.ts
 ```
-
-## Known SDK Deviations
-
-The design document has been updated to reflect the actual `@opencode-ai/sdk` types. Key implementation notes:
-
-| Area | Implementation Detail | Reason |
-|---|---|---|
-| `opencode.project.name` | Uses `project.id` | SDK `Project` type has no `name` field; `id` is the only identifier |
-| Shutdown event | `server.instance.disposed` | SDK `Event` union does not include `global.disposed` |
-| `service.version` | Set on session spans via `installation.updated` event | Version unavailable at plugin init; OTel Resource is immutable after creation |
-| `vcs.repository.ref.name` | Initial value on resource; updates on active session root spans | OTel Resource is immutable; branch changes via `vcs.branch.updated` propagate to active spans only |
-| `enduser.id` | `git config user.email` with `"unknown"` fallback | Email only; no `user.name` fallback |
-| `gen_ai.response.model` | Set from request model | SDK does not expose a separate response model field |
-| `error.type` on metrics | Included only on error paths | Per GenAI semconv, `error.type` is set "if operation errored" |
-| `file_edit` spans | Created from `session.diff` event | `file.edited` event has no `sessionID` for span parenting; `session.diff` provides line counts |
-| Compaction span | No `gen_ai.operation.name` | `session_compaction` is not a standard semconv operation value |
-| Error resilience | Plugin init wrapped in try/catch | Returns no-op hooks if OTel initialization fails |
 
 ## License
 
