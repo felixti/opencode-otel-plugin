@@ -15,7 +15,7 @@ export function startSessionSpan(tracer: Tracer, sessionID: string): { span: Spa
 
 export function startChatSpan(
   tracer: Tracer,
-  opts: { model: string; provider: string; sessionID: string },
+  opts: { model: string; provider: string; sessionID: string; branch?: string },
   parentContext?: Context,
 ): Span {
   return tracer.startSpan(`chat ${opts.model}`, {
@@ -25,13 +25,14 @@ export function startChatSpan(
       "gen_ai.provider.name": opts.provider,
       "gen_ai.request.model": opts.model,
       "gen_ai.conversation.id": opts.sessionID,
+      ...(opts.branch ? { "vcs.repository.ref.name": opts.branch } : {}),
     },
   }, parentContext)
 }
 
 export function startToolSpan(
   tracer: Tracer,
-  opts: { toolName: string; callID: string; sessionID: string },
+  opts: { toolName: string; callID: string; sessionID: string; branch?: string },
   parentContext?: Context,
 ): Span {
   return tracer.startSpan(`execute_tool ${opts.toolName}`, {
@@ -41,6 +42,7 @@ export function startToolSpan(
       "gen_ai.tool.name": opts.toolName,
       "gen_ai.tool.call.id": opts.callID,
       "gen_ai.conversation.id": opts.sessionID,
+      ...(opts.branch ? { "vcs.repository.ref.name": opts.branch } : {}),
     },
   }, parentContext)
 }
@@ -53,6 +55,7 @@ export function startFileEditSpan(
     linesAdded: number
     linesRemoved: number
     sessionID: string
+    branch?: string
   },
   parentContext?: Context,
 ): Span {
@@ -64,18 +67,19 @@ export function startFileEditSpan(
       "code.language": opts.language,
       "opencode.file.lines_added": opts.linesAdded,
       "opencode.file.lines_removed": opts.linesRemoved,
+      ...(opts.branch ? { "vcs.repository.ref.name": opts.branch } : {}),
     },
   }, parentContext)
   span.end()
   return span
 }
 
-export function startCompactionSpan(tracer: Tracer, sessionID: string, parentContext?: Context): Span {
+export function startCompactionSpan(tracer: Tracer, sessionID: string, parentContext?: Context, branch?: string): Span {
   const span = tracer.startSpan("session_compaction", {
     kind: SpanKind.INTERNAL,
     attributes: {
-      "gen_ai.operation.name": "session_compaction",
       "gen_ai.conversation.id": sessionID,
+      ...(branch ? { "vcs.repository.ref.name": branch } : {}),
     },
   }, parentContext)
   span.end()

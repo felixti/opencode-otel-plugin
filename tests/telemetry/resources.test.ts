@@ -37,4 +37,18 @@ describe("buildResourceAttributes", () => {
     expect(attrs["service.name"]).toBe("opencode")
     expect(attrs["host.name"]).toBe("unknown")
   })
+
+  test("does not include service.version (set on spans via installation.updated)", () => {
+    const attrs = buildResourceAttributes({
+      author: "dev@example.com",
+      hostname: "macbook-pro",
+      projectName: "my-project",
+      repoUrl: "https://github.com/org/repo",
+      branch: "main",
+      worktree: "/Users/dev/projects/my-project",
+      directory: "/Users/dev/projects/my-project",
+    })
+
+    expect(attrs["service.version"]).toBeUndefined()
+  })
 })

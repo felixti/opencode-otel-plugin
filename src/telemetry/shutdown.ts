@@ -6,7 +6,9 @@ export async function shutdownProviders(providers: Providers): Promise<void> {
       providers.tracerProvider.shutdown(),
       providers.meterProvider.shutdown(),
     ])
-  } catch {}
+  } catch {
+    // Intentionally swallowed — OTel shutdown errors must never propagate to the host
+  }
 }
 
 export async function flushProviders(providers: Providers): Promise<void> {
@@ -15,5 +17,7 @@ export async function flushProviders(providers: Providers): Promise<void> {
       providers.tracerProvider.forceFlush(),
       providers.meterProvider.forceFlush(),
     ])
-  } catch {}
+  } catch {
+    // Intentionally swallowed — OTel flush errors must never propagate to the host
+  }
 }

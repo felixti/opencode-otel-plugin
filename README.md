@@ -8,9 +8,7 @@ Add the plugin to your `opencode.json`:
 
 ```json
 {
-  "plugin": {
-    "opencode-otel-plugin": {}
-  }
+  "plugin": ["opencode-otel-plugin"]
 }
 ```
 
@@ -60,6 +58,7 @@ Attached to all telemetry, set once at plugin init:
 | Attribute | Source |
 |---|---|
 | `service.name` = `"opencode"` | Hardcoded |
+| `service.version` | `installation.updated` event (set on spans after received) |
 | `enduser.id` | `git config user.email` |
 | `host.name` | `os.hostname()` |
 | `opencode.project.name` | Project ID from plugin context |
@@ -108,6 +107,23 @@ bun test
 bun run typecheck
 bun run build
 ```
+
+## Known SDK Deviations
+
+The design document has been updated to reflect the actual `@opencode-ai/sdk` types. Key implementation notes:
+
+| Area | Implementation Detail | Reason |
+|---|---|---|
+| `opencode.project.name` | Uses `project.id` | SDK `Project` type has no `name` field; `id` is the only identifier |
+| Shutdown event | `server.instance.disposed` | SDK `Event` union does not include `global.disposed` |
+| `service.version` | Set on session spans via `installation.updated` event | Version unavailable at plugin init; OTel Resource is immutable after creation |
+| `vcs.repository.ref.name` | Initial value on resource; updates on active session root spans | OTel Resource is immutable; branch changes via `vcs.branch.updated` propagate to active spans only |
+| `enduser.id` | `git config user.email` with `"unknown"` fallback | Email only; no `user.name` fallback |
+| `gen_ai.response.model` | Set from request model | SDK does not expose a separate response model field |
+| `error.type` on metrics | Included only on error paths | Per GenAI semconv, `error.type` is set "if operation errored" |
+| `file_edit` spans | Created from `session.diff` event | `file.edited` event has no `sessionID` for span parenting; `session.diff` provides line counts |
+| Compaction span | No `gen_ai.operation.name` | `session_compaction` is not a standard semconv operation value |
+| Error resilience | Plugin init wrapped in try/catch | Returns no-op hooks if OTel initialization fails |
 
 ## License
 

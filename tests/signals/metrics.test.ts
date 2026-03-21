@@ -14,4 +14,54 @@ describe("createMetricInstruments", () => {
     expect(instruments.fileChanges).toBeDefined()
     expect(instruments.toolInvocations).toBeDefined()
   })
+
+  test("recording metrics does not throw", () => {
+    const meter = metrics.getMeter("test")
+    const instruments = createMetricInstruments(meter)
+
+    expect(() => {
+      instruments.tokenUsage.record(100, {
+        "gen_ai.operation.name": "chat",
+        "gen_ai.provider.name": "openai",
+        "gen_ai.token.type": "input",
+        "gen_ai.request.model": "gpt-4",
+      })
+    }).not.toThrow()
+
+    expect(() => {
+      instruments.operationDuration.record(1.5, {
+        "gen_ai.operation.name": "chat",
+        "gen_ai.provider.name": "openai",
+        "gen_ai.request.model": "gpt-4",
+      })
+    }).not.toThrow()
+
+    expect(() => {
+      instruments.requestCount.add(1, {
+        "gen_ai.request.model": "gpt-4",
+        "gen_ai.provider.name": "openai",
+        "gen_ai.conversation.id": "sess_1",
+      })
+    }).not.toThrow()
+
+    expect(() => {
+      instruments.compactionCount.add(1, {
+        "gen_ai.conversation.id": "sess_1",
+      })
+    }).not.toThrow()
+
+    expect(() => {
+      instruments.fileChanges.add(10, {
+        "code.filepath": "src/index.ts",
+        "opencode.change.type": "added",
+      })
+    }).not.toThrow()
+
+    expect(() => {
+      instruments.toolInvocations.add(1, {
+        "gen_ai.tool.name": "read",
+        "gen_ai.conversation.id": "sess_1",
+      })
+    }).not.toThrow()
+  })
 })

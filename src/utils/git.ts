@@ -13,9 +13,7 @@ async function shellGet($: Shell, cmd: string, fallback: string): Promise<string
 }
 
 export async function getGitAuthor($: Shell): Promise<string> {
-  const email = await shellGet($, "git config user.email", "")
-  if (email) return email
-  return shellGet($, "git config user.name", "unknown")
+  return shellGet($, "git config user.email", "unknown")
 }
 
 export async function getRepoUrl($: Shell): Promise<string> {

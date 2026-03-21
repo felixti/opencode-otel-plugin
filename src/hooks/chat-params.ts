@@ -25,6 +25,7 @@ export function createChatParamsHook(deps: ChatParamsHookDeps) {
       model: modelID,
       provider: providerID,
       sessionID,
+      branch: state.currentBranch,
     }, session?.context)
 
     state.pendingChatRequests.set(sessionID, {

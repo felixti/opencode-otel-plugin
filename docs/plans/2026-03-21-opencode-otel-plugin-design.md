@@ -36,19 +36,19 @@ An OpenCode plugin that instruments coding sessions with OpenTelemetry, emitting
 
 ## 1. Resource Attributes
 
-Set once at plugin init, attached to ALL telemetry.
+Set once at plugin init, attached to ALL telemetry via the OTel `Resource`. Some values are captured dynamically after init due to SDK constraints (see notes below).
 
-| Requirement | OTel Attribute | Source |
-|---|---|---|
-| Service name | `service.name` = `"opencode"` | Hardcoded |
-| OpenCode version | `service.version` | `client` API or installation event |
-| Author | `enduser.id` | `git config user.email` via `$` shell |
-| Machine hostname | `host.name` | `os.hostname()` |
-| Project name | `opencode.project.name` | `project.name` from plugin context |
-| Repository name | `vcs.repository.url.full` | `git remote get-url origin` via `$` shell |
-| Branch name | `vcs.repository.ref.name` | `git branch --show-current` via `$` shell (updated via `vcs.branch.updated` event) |
-| Worktree | `opencode.worktree` | `worktree` from plugin context |
-| Working directory | `opencode.directory` | `directory` from plugin context |
+| Requirement | OTel Attribute | Source | Notes |
+|---|---|---|---|
+| Service name | `service.name` = `"opencode"` | Hardcoded | On resource |
+| OpenCode version | `service.version` | `installation.updated` event | Set on session spans after received; not on resource (version unavailable at init) |
+| Author | `enduser.id` | `git config user.email` via `$` shell | Falls back to `"unknown"` if email not configured |
+| Machine hostname | `host.name` | `os.hostname()` | On resource |
+| Project name | `opencode.project.name` | `project.id` from plugin context | SDK `Project` type has no `name` field; `id` is the only identifier |
+| Repository URL | `vcs.repository.url.full` | `git remote get-url origin` via `$` shell | On resource |
+| Branch name | `vcs.repository.ref.name` | `git branch --show-current` via `$` shell | Initial value on resource; updated on active session root spans via `vcs.branch.updated` event (Resource is immutable after creation) |
+| Worktree | `opencode.worktree` | `worktree` from plugin context | On resource |
+| Working directory | `opencode.directory` | `directory` from plugin context | On resource |
 
 ---
 
@@ -61,12 +61,15 @@ invoke_agent opencode                          (INTERNAL, root span per session)
 ├── chat {model}                               (CLIENT, one per LLM request)
 │   attributes: gen_ai.request.model, gen_ai.provider.name,
 │               gen_ai.usage.input_tokens, gen_ai.usage.output_tokens,
-│               gen_ai.response.model, gen_ai.response.finish_reasons
+│               gen_ai.response.model (set from request model — SDK does not expose response model),
+│               gen_ai.response.finish_reasons (when finish reason available),
+│               error.type (on error only, per semconv)
 │
 ├── execute_tool {tool_name}                   (INTERNAL, one per tool call)
-│   attributes: gen_ai.tool.name, gen_ai.tool.call.id
+│   attributes: gen_ai.tool.name, gen_ai.tool.call.id,
+│               gen_ai.tool.output.title, gen_ai.tool.output.metadata.*
 │
-├── file_edit {filepath}                       (INTERNAL, one per file.edited event)
+├── file_edit {filepath}                       (INTERNAL, one per file change from session.diff)
 │   attributes: code.filepath, code.language,
 │               opencode.file.lines_added, opencode.file.lines_removed
 │
@@ -90,12 +93,12 @@ invoke_agent opencode                          (INTERNAL, root span per session)
 
 **Tool spans** (`execute_tool {tool_name}`):
 - Started in `tool.execute.before` hook
-- Ended in `tool.execute.after` hook with output metadata
+- Ended in `tool.execute.after` hook with output title and metadata attributes
 
 **File edit spans** (`file_edit {filepath}`):
-- Created from `file.edited` event
+- Created from `session.diff` event (provides line counts and file paths)
 - Language detected from file extension
-- Line counts extracted from `session.diff` event's `FileDiff[]`
+- `file.edited` event triggers language detection but has no sessionID for span parenting
 
 **Compaction spans** (`session_compaction`):
 - Created from `session.compacted` event
@@ -109,7 +112,7 @@ invoke_agent opencode                          (INTERNAL, root span per session)
 | Metric | Type | Unit | Attributes |
 |---|---|---|---|
 | `gen_ai.client.token.usage` | Histogram | `{token}` | `gen_ai.operation.name`, `gen_ai.provider.name`, `gen_ai.token.type` (`input`\|`output`), `gen_ai.request.model` |
-| `gen_ai.client.operation.duration` | Histogram | `s` | `gen_ai.operation.name`, `gen_ai.provider.name`, `gen_ai.request.model`, `error.type` |
+| `gen_ai.client.operation.duration` | Histogram | `s` | `gen_ai.operation.name`, `gen_ai.provider.name`, `gen_ai.request.model`, `error.type` (on error only, per semconv) |
 
 ### Custom OpenCode Metrics
 
@@ -132,11 +135,11 @@ invoke_agent opencode                          (INTERNAL, root span per session)
 │ event:message.updated│ → Extract tokens, end chat span       │
 │ event:session.created│ → Start session root span             │
 │ event:session.idle   │ → End session root span, flush metrics│
-│ event:session.diff   │ → File changes (lines +/-), language  │
+│ event:session.diff   │ → File changes (lines +/-), language, file_edit spans│
 │ event:session.compacted│ → Increment compaction counter      │
-│ event:file.edited    │ → Track language from file extension  │
+│ event:file.edited    │ → Detect language from file extension  │
 │ tool.execute.before  │ → Start tool span                     │
-│ tool.execute.after   │ → End tool span with output metadata  │
+│ tool.execute.after   │ → End tool span with output title and metadata│
 │ event:vcs.branch.updated│ → Update branch context            │
 └──────────────────────┴──────────────────────────────────────┘
          │                          │                    │
@@ -243,6 +246,7 @@ OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer xxx  # optional auth
 - **No console.log** — all output goes through OTel signals, not stdout
 - **Files < 200 lines** — split if approaching 150
 - **Barrel exports** — every directory has `index.ts`
-- **Graceful shutdown** — flush pending spans/metrics on `global.disposed` or `session.idle`
-- **Error resilience** — OTel failures must never crash the plugin or affect OpenCode
+- **Graceful shutdown** — flush pending spans/metrics on `server.instance.disposed` or `session.idle` (SDK event union uses `server.instance.disposed`, not `global.disposed`)
+- **Error resilience** — OTel failures must never crash the plugin or affect OpenCode; plugin init is wrapped in try/catch and returns no-op hooks on failure
 - **Low cardinality** — avoid per-request unique values in metric attributes (no messageIDs)
+- **Resource immutability** — OTel `Resource` is immutable after creation; dynamic values like `service.version` and branch updates are set as span attributes on active spans

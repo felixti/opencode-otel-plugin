@@ -3,9 +3,9 @@ import type { AssistantMessage } from "@opencode-ai/sdk"
 import { trace, metrics } from "@opentelemetry/api"
 import { createResource } from "./telemetry/resources"
 import { initProviders } from "./telemetry/provider"
-import { shutdownProviders } from "./telemetry/shutdown"
 import { createMetricInstruments } from "./signals/metrics"
 import { createEventHook } from "./hooks/event"
+import { handleMessageUpdated, handleSessionError, handleServerDisposed } from "./hooks/message-handler"
 import { createChatParamsHook } from "./hooks/chat-params"
 import { createToolExecuteHooks } from "./hooks/tool-execute"
 import { getGitAuthor, getRepoUrl, getCurrentBranch, getHostname } from "./utils/git"
@@ -15,32 +15,48 @@ const TRACER_NAME = "opencode-otel-plugin"
 const METER_NAME = "opencode-otel-plugin"
 
 export const OpenCodeOtelPlugin: Plugin = async ({ project, client, $, directory, worktree }) => {
-  const [author, repoUrl, branch] = await Promise.all([
-    getGitAuthor($),
-    getRepoUrl($),
-    getCurrentBranch($),
-  ])
+  let tracer: ReturnType<typeof trace.getTracer>
+  let meter: ReturnType<typeof metrics.getMeter>
+  let instruments: ReturnType<typeof createMetricInstruments>
+  let providers: ReturnType<typeof initProviders>
+  let state: PluginState
 
-  const resource = createResource({
-    author,
-    hostname: getHostname(),
-    projectName: project.id ?? "",
-    repoUrl,
-    branch,
-    worktree,
-    directory,
-  })
+  try {
+    const [author, repoUrl, branch] = await Promise.all([
+      getGitAuthor($),
+      getRepoUrl($),
+      getCurrentBranch($),
+    ])
 
-  const providers = initProviders(resource)
-  const tracer = trace.getTracer(TRACER_NAME)
-  const meter = metrics.getMeter(METER_NAME)
-  const instruments = createMetricInstruments(meter)
+    const resource = createResource({
+      author,
+      hostname: getHostname(),
+      projectName: project.id ?? "",
+      repoUrl,
+      branch,
+      worktree,
+      directory,
+    })
 
-  const state: PluginState = {
-    sessionSpans: new Map(),
-    toolSpans: new Map(),
-    pendingChatRequests: new Map(),
-    currentBranch: branch,
+    providers = initProviders(resource)
+    tracer = trace.getTracer(TRACER_NAME)
+    meter = metrics.getMeter(METER_NAME)
+    instruments = createMetricInstruments(meter)
+
+    state = {
+      sessionSpans: new Map(),
+      toolSpans: new Map(),
+      pendingChatRequests: new Map(),
+      currentBranch: branch,
+      opencodeVersion: undefined,
+    }
+  } catch {
+    return {
+      event: async () => {},
+      "chat.params": async () => {},
+      "tool.execute.before": async () => {},
+      "tool.execute.after": async () => {},
+    }
   }
 
   const eventHook = createEventHook({ tracer, instruments, state, providers })
@@ -50,50 +66,29 @@ export const OpenCodeOtelPlugin: Plugin = async ({ project, client, $, directory
   return {
     event: async ({ event }) => {
       try {
+        if (event.type === "installation.updated") {
+          state.opencodeVersion = event.properties.version
+          for (const session of state.sessionSpans.values()) {
+            session.span.setAttribute("service.version", event.properties.version)
+          }
+          return
+        }
+
         if (event.type === "message.updated") {
           const msg = event.properties.info
           if (msg.role === "assistant") {
-            const assistant = msg as AssistantMessage
-            const sessionID = assistant.sessionID
-            const chatSpan = state.toolSpans.get(`chat:${sessionID}`)
-            const chatReq = state.pendingChatRequests.get(sessionID)
-
-            if (chatSpan && chatReq) {
-              const inputTokens = assistant.tokens.input ?? 0
-              const outputTokens = assistant.tokens.output ?? 0
-
-              chatSpan.setAttribute("gen_ai.usage.input_tokens", inputTokens)
-              chatSpan.setAttribute("gen_ai.usage.output_tokens", outputTokens)
-              chatSpan.setAttribute("gen_ai.response.model", chatReq.model)
-              chatSpan.end()
-              state.toolSpans.delete(`chat:${sessionID}`)
-
-              const durationS = (Date.now() - chatReq.startTime) / 1000
-              instruments.tokenUsage.record(inputTokens, {
-                "gen_ai.operation.name": "chat",
-                "gen_ai.provider.name": chatReq.provider,
-                "gen_ai.token.type": "input",
-                "gen_ai.request.model": chatReq.model,
-              })
-              instruments.tokenUsage.record(outputTokens, {
-                "gen_ai.operation.name": "chat",
-                "gen_ai.provider.name": chatReq.provider,
-                "gen_ai.token.type": "output",
-                "gen_ai.request.model": chatReq.model,
-              })
-              instruments.operationDuration.record(durationS, {
-                "gen_ai.operation.name": "chat",
-                "gen_ai.provider.name": chatReq.provider,
-                "gen_ai.request.model": chatReq.model,
-              })
-
-              state.pendingChatRequests.delete(sessionID)
-            }
+            handleMessageUpdated(msg as AssistantMessage, state, instruments)
           }
+          return
         }
 
         if (event.type === "server.instance.disposed") {
-          await shutdownProviders(providers)
+          await handleServerDisposed(state, providers)
+          return
+        }
+
+        if (event.type === "session.error") {
+          handleSessionError(event, state, instruments)
           return
         }
 

@@ -35,4 +35,5 @@ export interface PluginState {
   toolSpans: ToolSpanMap
   pendingChatRequests: Map<string, ChatRequestInfo>
   currentBranch: string | undefined
+  opencodeVersion: string | undefined
 }
