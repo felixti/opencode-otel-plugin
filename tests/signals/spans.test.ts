@@ -28,7 +28,8 @@ beforeEach(() => {
 describe("startSessionSpan", () => {
   test("creates an INTERNAL span named invoke_agent opencode", () => {
     const tracer = trace.getTracer("test")
-    const span = startSessionSpan(tracer, "sess_123")
+    const { span, context } = startSessionSpan(tracer, "sess_123")
+    expect(context).toBeDefined()
     span.end()
 
     const spans = exporter.getFinishedSpans()

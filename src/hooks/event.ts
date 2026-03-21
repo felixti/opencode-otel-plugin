@@ -21,8 +21,8 @@ export function createEventHook(deps: EventHookDeps) {
       case "session.created": {
         const sessionID = event.properties.info?.id
         if (!sessionID) break
-        const span = startSessionSpan(tracer, sessionID)
-        state.sessionSpans.set(sessionID, { span, sessionID, requestCount: 0 })
+        const { span, context } = startSessionSpan(tracer, sessionID)
+        state.sessionSpans.set(sessionID, { span, context, sessionID, requestCount: 0 })
         break
       }
 
@@ -43,22 +43,21 @@ export function createEventHook(deps: EventHookDeps) {
         const diffs = event.properties.diff as any[] | undefined
         if (!diffs?.length) break
 
+        const session = state.sessionSpans.get(sessionID)
         const changes: FileChangeStats[] = extractFileChanges(diffs)
         for (const change of changes) {
-          startFileEditSpan(tracer, { ...change, sessionID })
+          startFileEditSpan(tracer, { ...change, sessionID }, session?.context)
 
           if (change.linesAdded > 0) {
             instruments.fileChanges.add(change.linesAdded, {
               "opencode.change.type": "added",
               "code.language": change.language,
-              "code.filepath": change.filepath,
             })
           }
           if (change.linesRemoved > 0) {
             instruments.fileChanges.add(change.linesRemoved, {
               "opencode.change.type": "removed",
               "code.language": change.language,
-              "code.filepath": change.filepath,
             })
           }
         }
@@ -67,7 +66,8 @@ export function createEventHook(deps: EventHookDeps) {
 
       case "session.compacted": {
         const sessionID = event.properties.sessionID as string
-        startCompactionSpan(tracer, sessionID)
+        const session = state.sessionSpans.get(sessionID)
+        startCompactionSpan(tracer, sessionID, session?.context)
         instruments.compactionCount.add(1, {
           "gen_ai.conversation.id": sessionID,
         })

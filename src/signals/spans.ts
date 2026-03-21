@@ -1,7 +1,7 @@
-import { type Span, SpanKind, type Tracer } from "@opentelemetry/api"
+import { type Context, type Span, SpanKind, type Tracer, context as otelContext, trace } from "@opentelemetry/api"
 
-export function startSessionSpan(tracer: Tracer, sessionID: string): Span {
-  return tracer.startSpan("invoke_agent opencode", {
+export function startSessionSpan(tracer: Tracer, sessionID: string): { span: Span; context: Context } {
+  const span = tracer.startSpan("invoke_agent opencode", {
     kind: SpanKind.INTERNAL,
     attributes: {
       "gen_ai.operation.name": "invoke_agent",
@@ -9,11 +9,14 @@ export function startSessionSpan(tracer: Tracer, sessionID: string): Span {
       "gen_ai.conversation.id": sessionID,
     },
   })
+  const ctx = trace.setSpan(otelContext.active(), span)
+  return { span, context: ctx }
 }
 
 export function startChatSpan(
   tracer: Tracer,
   opts: { model: string; provider: string; sessionID: string },
+  parentContext?: Context,
 ): Span {
   return tracer.startSpan(`chat ${opts.model}`, {
     kind: SpanKind.CLIENT,
@@ -23,12 +26,13 @@ export function startChatSpan(
       "gen_ai.request.model": opts.model,
       "gen_ai.conversation.id": opts.sessionID,
     },
-  })
+  }, parentContext)
 }
 
 export function startToolSpan(
   tracer: Tracer,
   opts: { toolName: string; callID: string; sessionID: string },
+  parentContext?: Context,
 ): Span {
   return tracer.startSpan(`execute_tool ${opts.toolName}`, {
     kind: SpanKind.INTERNAL,
@@ -38,7 +42,7 @@ export function startToolSpan(
       "gen_ai.tool.call.id": opts.callID,
       "gen_ai.conversation.id": opts.sessionID,
     },
-  })
+  }, parentContext)
 }
 
 export function startFileEditSpan(
@@ -50,6 +54,7 @@ export function startFileEditSpan(
     linesRemoved: number
     sessionID: string
   },
+  parentContext?: Context,
 ): Span {
   const span = tracer.startSpan(`file_edit ${opts.filepath}`, {
     kind: SpanKind.INTERNAL,
@@ -60,19 +65,19 @@ export function startFileEditSpan(
       "opencode.file.lines_added": opts.linesAdded,
       "opencode.file.lines_removed": opts.linesRemoved,
     },
-  })
+  }, parentContext)
   span.end()
   return span
 }
 
-export function startCompactionSpan(tracer: Tracer, sessionID: string): Span {
+export function startCompactionSpan(tracer: Tracer, sessionID: string, parentContext?: Context): Span {
   const span = tracer.startSpan("session_compaction", {
     kind: SpanKind.INTERNAL,
     attributes: {
       "gen_ai.operation.name": "session_compaction",
       "gen_ai.conversation.id": sessionID,
     },
-  })
+  }, parentContext)
   span.end()
   return span
 }

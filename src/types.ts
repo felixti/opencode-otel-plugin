@@ -1,11 +1,12 @@
 // Shared types for the OpenCode OTel plugin.
 // Defines state tracking structures used across hooks and signals.
 
-import type { Span } from "@opentelemetry/api"
+import type { Context, Span } from "@opentelemetry/api"
 
 /** Tracks the active OTel span for a session root. */
 export interface SessionSpanState {
   span: Span
+  context: Context
   sessionID: string
   requestCount: number
 }

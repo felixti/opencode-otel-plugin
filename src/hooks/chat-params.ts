@@ -20,11 +20,12 @@ export function createChatParamsHook(deps: ChatParamsHookDeps) {
     const providerID = input.provider?.id ?? input.provider?.providerID ?? "unknown"
     const sessionID = input.sessionID
 
+    const session = state.sessionSpans.get(sessionID)
     const span = startChatSpan(tracer, {
       model: modelID,
       provider: providerID,
       sessionID,
-    })
+    }, session?.context)
 
     state.pendingChatRequests.set(sessionID, {
       model: modelID,
@@ -38,7 +39,6 @@ export function createChatParamsHook(deps: ChatParamsHookDeps) {
       "gen_ai.conversation.id": sessionID,
     })
 
-    const session = state.sessionSpans.get(sessionID)
     if (session) {
       session.requestCount++
     }

@@ -16,11 +16,12 @@ export function createToolExecuteHooks(deps: ToolExecuteHookDeps) {
     input: { tool: string; sessionID: string; callID: string },
     _output: { args: any },
   ) => {
+    const session = state.sessionSpans.get(input.sessionID)
     const span = startToolSpan(tracer, {
       toolName: input.tool,
       callID: input.callID,
       sessionID: input.sessionID,
-    })
+    }, session?.context)
     state.toolSpans.set(input.callID, span)
 
     instruments.toolInvocations.add(1, {
