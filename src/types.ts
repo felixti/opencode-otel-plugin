@@ -1,0 +1,37 @@
+// Shared types for the OpenCode OTel plugin.
+// Defines state tracking structures used across hooks and signals.
+
+import type { Span } from "@opentelemetry/api"
+
+/** Tracks the active OTel span for a session root. */
+export interface SessionSpanState {
+  span: Span
+  sessionID: string
+  requestCount: number
+}
+
+/** Model/provider info captured in chat.params, used when ending chat spans. */
+export interface ChatRequestInfo {
+  model: string
+  provider: string
+  startTime: number
+}
+
+/** Accumulated file change stats from session.diff events. */
+export interface FileChangeStats {
+  linesAdded: number
+  linesRemoved: number
+  filepath: string
+  language: string
+}
+
+/** In-flight tool span keyed by callID. */
+export type ToolSpanMap = Map<string, Span>
+
+/** Plugin-wide mutable state shared across hooks. */
+export interface PluginState {
+  sessionSpans: Map<string, SessionSpanState>
+  toolSpans: ToolSpanMap
+  pendingChatRequests: Map<string, ChatRequestInfo>
+  currentBranch: string | undefined
+}

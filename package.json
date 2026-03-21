@@ -1,0 +1,32 @@
+{
+  "name": "opencode-otel-plugin",
+  "version": "0.1.0",
+  "description": "OpenTelemetry observability plugin for OpenCode — traces, metrics, and resource attributes for AI coding sessions",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir dist --target bun",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": ">=0.1.0"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "1.9.0",
+    "@opentelemetry/sdk-trace-base": "2.6.0",
+    "@opentelemetry/sdk-metrics": "2.6.0",
+    "@opentelemetry/exporter-trace-otlp-http": "0.213.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "0.213.0",
+    "@opentelemetry/resources": "2.6.0",
+    "@opentelemetry/semantic-conventions": "1.40.0"
+  },
+  "devDependencies": {
+    "@opencode-ai/plugin": "latest",
+    "@types/bun": "latest",
+    "typescript": "latest"
+  },
+  "license": "MIT"
+}
