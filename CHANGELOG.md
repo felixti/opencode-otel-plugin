@@ -1,3 +1,9 @@
+## [0.5.0](https://github.com/felixti/opencode-otel-plugin/compare/v0.4.2...v0.5.0) (2026-03-22)
+
+### Features
+
+* **hooks:** add file change counts as span attributes on execute_tool spans ([5768eeb](https://github.com/felixti/opencode-otel-plugin/commit/5768eeb3e666c3af79a13b8fccca57e7448b8923))
+
 ## [0.4.2](https://github.com/felixti/opencode-otel-plugin/compare/v0.4.1...v0.4.2) (2026-03-22)
 
 ### Bug Fixes
