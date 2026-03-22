@@ -19,14 +19,6 @@ export interface ChatRequestInfo {
   startTime: number
 }
 
-/** Accumulated file change stats from session.diff events. */
-export interface FileChangeStats {
-  linesAdded: number
-  linesRemoved: number
-  filepath: string
-  language: string
-}
-
 export interface ToolSpanEntry {
   span: Span
   sessionID: string

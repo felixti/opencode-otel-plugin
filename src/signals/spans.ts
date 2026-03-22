@@ -48,37 +48,6 @@ export function startToolSpan(
   }, parentContext)
 }
 
-export function startFileEditSpan(
-  tracer: Tracer,
-  opts: {
-    filepath: string
-    language: string
-    linesAdded: number
-    linesRemoved: number
-    sessionID: string
-    branch?: string
-    gitAuthor?: string
-    repoUrl?: string
-  },
-  parentContext?: Context,
-): Span {
-  const span = tracer.startSpan("file_edit", {
-    kind: SpanKind.INTERNAL,
-    attributes: {
-      "gen_ai.conversation.id": truncate(opts.sessionID),
-      "code.filepath": truncate(opts.filepath),
-      "code.language": truncate(opts.language),
-      "opencode.file.lines_added": opts.linesAdded,
-      "opencode.file.lines_removed": opts.linesRemoved,
-      ...(opts.branch ? { "vcs.repository.ref.name": truncate(opts.branch) } : {}),
-      ...(opts.gitAuthor ? { "enduser.id": truncate(opts.gitAuthor) } : {}),
-      ...(opts.repoUrl ? { "vcs.repository.url.full": truncate(opts.repoUrl) } : {}),
-    },
-  }, parentContext)
-  span.end()
-  return span
-}
-
 export function startCompactionSpan(
   tracer: Tracer,
   sessionID: string,

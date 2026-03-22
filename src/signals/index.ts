@@ -4,6 +4,5 @@ export {
   startSessionSpan,
   startChatSpan,
   startToolSpan,
-  startFileEditSpan,
   startCompactionSpan,
 } from "./spans"

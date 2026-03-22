@@ -9,7 +9,6 @@ import {
   startSessionSpan,
   startChatSpan,
   startToolSpan,
-  startFileEditSpan,
   startCompactionSpan,
 } from "../../src/signals/spans"
 
@@ -81,28 +80,6 @@ describe("startToolSpan", () => {
     expect(toolSpan!.attributes["gen_ai.tool.name"]).toBe("read")
     expect(toolSpan!.attributes["gen_ai.tool.call.id"]).toBe("call_1")
     expect(toolSpan!.attributes["gen_ai.conversation.id"]).toBe("sess_123")
-  })
-})
-
-describe("startFileEditSpan", () => {
-  test("creates an INTERNAL span with filepath", () => {
-    const tracer = trace.getTracer("test")
-    const span = startFileEditSpan(tracer, {
-      filepath: "src/index.ts",
-      language: "typescript",
-      linesAdded: 10,
-      linesRemoved: 3,
-      sessionID: "sess_123",
-    })
-    span.end()
-
-    const spans = exporter.getFinishedSpans()
-     const fileSpan = spans.find((s) => s.name === "file_edit")
-    expect(fileSpan).toBeDefined()
-    expect(fileSpan!.attributes["code.filepath"]).toBe("src/index.ts")
-    expect(fileSpan!.attributes["code.language"]).toBe("typescript")
-    expect(fileSpan!.attributes["opencode.file.lines_added"]).toBe(10)
-    expect(fileSpan!.attributes["opencode.file.lines_removed"]).toBe(3)
   })
 })
 

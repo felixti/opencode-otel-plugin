@@ -1,8 +1,7 @@
 import type { Tracer } from "@opentelemetry/api"
-import type { PluginState, FileChangeStats } from "../types"
+import type { PluginState } from "../types"
 import type { MetricInstruments } from "../signals/metrics"
-import { startSessionSpan, startFileEditSpan, startCompactionSpan } from "../signals/spans"
-import { extractFileChanges } from "../utils/diff"
+import { startSessionSpan, startCompactionSpan } from "../signals/spans"
 import { flushProviders } from "../telemetry/shutdown"
 import type { Providers } from "../telemetry/provider"
 import { truncate } from "../utils/truncate"
@@ -59,40 +58,6 @@ export function createEventHook(deps: EventHookDeps) {
         if (!state.lastFlushTime || now - state.lastFlushTime >= 30_000) {
           state.lastFlushTime = now
           await flushProviders(providers)
-        }
-        break
-      }
-
-      case "session.diff": {
-        const sessionID = event.properties.sessionID as string
-        const diffs = event.properties.diff as Array<{ path: string; additions?: number; deletions?: number }> | undefined
-        if (!diffs?.length) break
-
-        await state.gitReady
-        const session = state.sessionSpans.get(sessionID)
-        if (session) session.lastActivityAt = Date.now()
-        const changes: FileChangeStats[] = extractFileChanges(diffs)
-        for (const change of changes) {
-          startFileEditSpan(tracer, {
-            ...change,
-            sessionID,
-            branch: state.currentBranch,
-            gitAuthor: state.gitAuthor,
-            repoUrl: state.repoUrl,
-          }, session?.context)
-
-          if (change.linesAdded > 0) {
-            instruments.fileChanges.add(change.linesAdded, {
-              "opencode.change.type": truncate("added"),
-              "code.language": truncate(change.language),
-            })
-          }
-          if (change.linesRemoved > 0) {
-            instruments.fileChanges.add(change.linesRemoved, {
-              "opencode.change.type": truncate("removed"),
-              "code.language": truncate(change.language),
-            })
-          }
         }
         break
       }

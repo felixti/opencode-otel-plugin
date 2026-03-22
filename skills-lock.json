@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "skills": {
+    "create-opencode-plugin": {
+      "source": "igorwarzocha/opencode-workflows",
+      "sourceType": "github",
+      "computedHash": "529e5be309532437e4c444198d365f6f53904fa88e045a4de8c1c83cffc73f42"
+    },
+    "opentelemetry": {
+      "source": "bobmatnyc/claude-mpm-skills",
+      "sourceType": "github",
+      "computedHash": "0c6bb77303278c9b829e37f6597aeffe44b8bf0cb7dcbdaff382877a6820401c"
+    },
+    "skill-creator": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "b122f4d1e91aa1d83027e050b5b37c3156203ee85458d7b1360bc48167c9e02a"
+    }
+  }
+}

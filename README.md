@@ -93,6 +93,19 @@ export OTEL_EXPORTER_OTLP_HEADERS="x-honeycomb-team=<your-api-key>"
 </details>
 
 <details>
+<summary><strong>Dynatrace</strong></summary>
+
+```bash
+export OTEL_EXPORTER_OTLP_ENDPOINT="https://{your-environment-id}.live.dynatrace.com/api/v2/otlp"
+export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Api-Token {your-api-token}"
+export OTEL_EXPORTER_OTLP_PROTOCOL="http/protobuf"
+```
+
+Create an API token in Dynatrace with `openTelemetryTrace.ingest` and `metrics.ingest` scopes.
+
+</details>
+
+<details>
 <summary><strong>Datadog</strong></summary>
 
 ```bash
