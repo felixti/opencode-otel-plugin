@@ -1,3 +1,9 @@
+## [0.5.1](https://github.com/felixti/opencode-otel-plugin/compare/v0.5.0...v0.5.1) (2026-03-22)
+
+### Bug Fixes
+
+* switch OTLP exporters from JSON to protobuf for Dynatrace compatibility ([46f0aa9](https://github.com/felixti/opencode-otel-plugin/commit/46f0aa9ceef9d348bfe3597820d4159aea5d7971))
+
 ## [0.5.0](https://github.com/felixti/opencode-otel-plugin/compare/v0.4.2...v0.5.0) (2026-03-22)
 
 ### Features
