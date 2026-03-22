@@ -1,3 +1,11 @@
+## [0.6.0](https://github.com/felixti/opencode-otel-plugin/compare/v0.5.1...v0.6.0) (2026-03-22)
+
+### Features
+
+* **hooks:** wire VCS operation detection and metric recording ([53b6b8b](https://github.com/felixti/opencode-otel-plugin/commit/53b6b8bf0d9bfd3d0dbf444547817e943f8a5b01))
+* **signals:** add vcsOperations counter to MetricInstruments ([d029bf2](https://github.com/felixti/opencode-otel-plugin/commit/d029bf20f809ebd43bf19f8ed8b79d036d0edcad))
+* **utils:** add VCS operation detection for git commit ([2a98d7a](https://github.com/felixti/opencode-otel-plugin/commit/2a98d7a9dbfdbabcc98ec0a16a8e33f246d9f066))
+
 ## [0.5.1](https://github.com/felixti/opencode-otel-plugin/compare/v0.5.0...v0.5.1) (2026-03-22)
 
 ### Bug Fixes
