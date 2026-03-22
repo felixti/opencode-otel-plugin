@@ -1,6 +1,6 @@
 {
   "name": "opencode-otel-plugin",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "OpenTelemetry instrumentation plugin for OpenCode — traces and metrics for AI coding sessions via OTLP/HTTP",
   "type": "module",
   "main": "dist/index.js",
@@ -60,6 +60,8 @@
   },
   "license": "MIT",
   "commitlint": {
-    "extends": ["@commitlint/config-conventional"]
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
   }
 }
