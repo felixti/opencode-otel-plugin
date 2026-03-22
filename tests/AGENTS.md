@@ -25,3 +25,11 @@ tests/
 - OTel tests use real SDK instances (no mocks for `Tracer`/`Meter`) with in-memory exporters where needed
 - `hooks/` tests use their own `BasicTracerProvider` + `InMemorySpanExporter` (isolated from `spans.test.ts`)
 - 55 tests, 96 assertions total
+
+## Test Patterns
+
+- **Span assertions**: create `BasicTracerProvider` + `SimpleSpanProcessor` + `InMemorySpanExporter` → call code under test → `exporter.getFinishedSpans()` to inspect names, attributes, parent IDs
+- **Metric assertions**: use small in-file spy objects (`createSpyCounter()` with `add()` that records calls) rather than full metric SDK exporters
+- **Mock state**: `createMockState()` returns `PluginState`-shaped object with empty maps and `gitReady = Promise.resolve()` to avoid real git calls
+- **No mocking frameworks**: no jest/vitest/sinon — use explicit small fakes defined inline per test file
+- **Reset in `beforeEach`**: exporters reset and state rebuilt per test for isolation

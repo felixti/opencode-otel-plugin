@@ -9,7 +9,7 @@ OpenCode plugin hook implementations. Each file handles one hook type or a relat
 Handles the `event` hook for session lifecycle and workspace events. Creates the `createEventHook()` factory that dispatches on `event.type`:
 
 - `session.created` → starts root `invoke_agent opencode` span, stores in `state.sessionSpans`
-- `session.idle` → ends session span, flushes providers
+- `session.idle` → ends session span, flushes providers (throttled by `lastFlushTime`, 30s guard)
 - `session.compacted` → creates `session_compaction` span + records `opencode.session.compaction.count`
 - `vcs.branch.updated` → updates `state.currentBranch` and sets attribute on all active spans
 
@@ -32,9 +32,9 @@ Handles `chat.params` hook. Starts a `chat {model}` span as child of the session
 Handles `tool.execute.before` and `tool.execute.after`. Before: starts `execute_tool {toolName}` span, records `opencode.tool.invocations`. After: sets output attributes (title, metadata), ends span. For edit and write tool calls, detects `code.language` from the output metadata file path via `resolveFilepath()` + `detectLanguage()`, and records `opencode.file.changes` metric with additions/deletions via `recordFileChanges()`. Uses recursive `setMetadataAttributes()` to flatten nested metadata objects into dotted span attribute keys.
 
 Helper functions:
-- `setMetadataAttributes()` — recursively flattens metadata objects into span attributes (depth ≤ 3, max 32 keys)
-- `resolveFilepath()` — extracts file path from metadata checking `path`, `file`, and `filediff.file`
-- `recordFileChanges()` — records `opencode.file.changes` metric; handles TS backend shape (`filediff.additions/deletions`) and Go backend shape (`additions/removals`) for edit tools, and top-level `additions/removals` for write tools
+- `setMetadataAttributes(span, metadata, prefix, depth)` — recursively flattens metadata into span attributes (depth ≤ 3, max 32 keys, strings truncated to budget)
+- `resolveFilepath(metadata)` — extracts file path checking `path`, `file`, and `filediff.file` keys
+- `recordFileChanges(instruments, metadata, toolName, sessionID, branch)` — records `opencode.file.changes` metric; handles TS backend shape (`filediff.additions/deletions`) and Go backend shape (`additions/removals`) for edit tools, and top-level `additions/removals` for write tools
 
 ### `index.ts` — Barrel Export (4 lines)
 
@@ -46,3 +46,4 @@ Re-exports all public functions from the hook modules.
 - **Parent context propagation**: hooks look up the session from `state.sessionSpans` and pass `session.context` to span creation functions.
 - **Span keying**: chat spans are keyed as `chat:${sessionID}` in `state.toolSpans`; tool spans use `callID`.
 - **Error swallowing**: all hook invocations in `src/index.ts` are wrapped in try/catch — individual handler functions do not catch internally.
+- **Guard patterns**: early returns on missing sessionID, missing tokens, null chatEntry. Never rely on implicit state presence.

@@ -31,6 +31,8 @@ Returns `Providers` type `{ tracerProvider, meterProvider }` for shutdown/flush 
 - `shutdownProviders(providers)` — calls `.shutdown()` on both providers via `Promise.allSettled()`. Used on `server.instance.disposed`.
 - `flushProviders(providers)` — calls `.forceFlush()` on both providers. Used on `session.idle`.
 
-Both functions swallow errors — OTel shutdown/flush failures must never propagate to the host.
+Both functions swallow errors — OTel shutdown/flush failures must never propagate to the host. Uses `withTimeout` wrapper to race promises against a deadline; timers are `.unref()`'d where available.
 
 ### `index.ts` — Barrel Export (5 lines)
+
+Re-exports `createResource`, `buildResourceAttributes`, `initProviders`, `Providers`, `shutdownProviders`, `flushProviders`.

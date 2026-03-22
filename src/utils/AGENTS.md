@@ -19,4 +19,10 @@ Shell-based git metadata extraction using `PluginInput["$"]` (BunShell):
 
 All functions use a shared `shellGet()` helper that runs commands via `$\`sh -c ${cmd}\`.quiet()` and returns the trimmed output or a fallback string on error.
 
+### `truncate.ts` — String Truncation (7 lines)
+
+`truncate(value, maxLength)` → truncates strings for low-cardinality span attributes. Used by `setMetadataAttributes` in `hooks/tool-execute.ts` and for branch/version attributes.
+
 ### `index.ts` — Barrel Export (3 lines)
+
+Re-exports `detectLanguage`, `getGitAuthor`, `getRepoUrl`, `getCurrentBranch`, `getHostname`, `truncate`.
