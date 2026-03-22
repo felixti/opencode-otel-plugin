@@ -24,7 +24,7 @@ src/
 ├── hooks/            # Event/hook handlers — one per OpenCode hook type
 ├── signals/          # OTel instrument definitions — spans and metrics
 ├── telemetry/        # OTel SDK setup — resource, provider init, shutdown/flush
-└── utils/            # Pure helpers — language detection, diff parsing, git info
+└── utils/            # Pure helpers — language detection, git info
 ```
 
 ### Data Flow

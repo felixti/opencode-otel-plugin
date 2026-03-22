@@ -209,7 +209,7 @@ This plugin follows [OpenTelemetry GenAI Semantic Conventions](https://opentelem
 git clone https://github.com/felixti/opencode-otel-plugin.git
 cd opencode-otel-plugin
 bun install
-bun test             # 37 tests, 77 assertions
+bun test             # 32 tests, 68 assertions
 bun run typecheck    # tsc --noEmit
 bun run build        # dist/index.js + dist/index.d.ts
 ```

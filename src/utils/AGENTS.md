@@ -8,10 +8,6 @@ Pure helper functions with no OTel dependencies.
 
 `detectLanguage(filepath)` → maps file extension to language name string. Uses a static `EXTENSION_MAP` covering 35+ extensions (TypeScript, Python, Go, Rust, etc.). Returns `"unknown"` for unrecognized extensions or files without extensions.
 
-### `diff.ts` — Diff Parsing (17 lines)
-
-`extractFileChanges(diffs)` → converts `session.diff` event payloads into `FileChangeStats[]`. Maps each diff entry's `additions`/`deletions` (defaulting to 0) and calls `detectLanguage` on the path.
-
 ### `git.ts` — Git & Host Info (33 lines)
 
 Shell-based git metadata extraction using `PluginInput["$"]` (BunShell):
