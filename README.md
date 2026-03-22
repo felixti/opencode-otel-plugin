@@ -127,41 +127,149 @@ Use an [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) to fa
 
 ## What Gets Collected
 
-### Traces
+### Span Hierarchy
 
-Each OpenCode session produces a trace tree with parent-child relationships:
+Each OpenCode session produces a trace tree with explicit parent-child relationships:
 
-| Span | Trigger | Key Attributes |
+```
+invoke_agent opencode                    ← root span (one per session)
+├── chat {model}                         ← child span (one per LLM request)
+├── execute_tool {tool_name}             ← child span (one per tool call)
+└── session_compaction                   ← child span (one per compaction)
+```
+
+### Trace Attributes
+
+#### `invoke_agent opencode` — Session Root Span
+
+Created when a session starts, ended on `session.idle`. One per coding session.
+
+| Attribute | Type | Description |
 |---|---|---|
-| `invoke_agent opencode` | Session start | `gen_ai.agent.name`, `gen_ai.conversation.id` |
-| `chat {model}` | LLM request | `gen_ai.request.model`, `gen_ai.provider.name`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens` |
-| `execute_tool {name}` | Tool call | `gen_ai.tool.name`, `gen_ai.tool.call.id`, `code.language` (edit/write tools) |
-| `session_compaction` | Context compaction | `gen_ai.conversation.id` |
+| `gen_ai.operation.name` | string | Always `"invoke_agent"` |
+| `gen_ai.agent.name` | string | Always `"opencode"` |
+| `gen_ai.conversation.id` | string | OpenCode session ID |
+| `service.version` | string | OpenCode version (set when `installation.updated` fires) |
+| `vcs.repository.ref.name` | string | Current git branch |
+| `enduser.id` | string | Git author email (`git config user.email`) |
+| `vcs.repository.url.full` | string | Git remote URL |
+| `opencode.session.request_count` | number | Total LLM requests in session (set when span ends) |
+
+#### `chat {model}` — LLM Request Span
+
+Created on `chat.params` hook, ended when the assistant message arrives with token counts.
+
+| Attribute | Type | Description |
+|---|---|---|
+| `gen_ai.operation.name` | string | Always `"chat"` |
+| `gen_ai.request.model` | string | Model ID sent in the request (e.g., `claude-sonnet-4-20250514`) |
+| `gen_ai.provider.name` | string | Provider identifier (e.g., `anthropic`, `openai`) |
+| `gen_ai.conversation.id` | string | OpenCode session ID |
+| `vcs.repository.ref.name` | string | Current git branch |
+| `enduser.id` | string | Git author email |
+| `vcs.repository.url.full` | string | Git remote URL |
+| `gen_ai.usage.input_tokens` | number | Input tokens consumed (set on completion) |
+| `gen_ai.usage.output_tokens` | number | Output tokens generated (set on completion) |
+| `gen_ai.response.model` | string | Model ID from the response |
+| `gen_ai.response.finish_reasons` | string[] | Finish reasons array (e.g., `["end_turn"]`) |
+| `error.type` | string | Error class name (set only on failure) |
+
+#### `execute_tool {name}` — Tool Execution Span
+
+Created on `tool.execute.before`, ended on `tool.execute.after`. Includes flattened tool output metadata.
+
+| Attribute | Type | Description |
+|---|---|---|
+| `gen_ai.operation.name` | string | Always `"execute_tool"` |
+| `gen_ai.tool.name` | string | Tool name (e.g., `edit`, `write`, `bash`, `glob`) |
+| `gen_ai.tool.call.id` | string | Unique tool call identifier |
+| `gen_ai.conversation.id` | string | OpenCode session ID |
+| `vcs.repository.ref.name` | string | Current git branch |
+| `enduser.id` | string | Git author email |
+| `vcs.repository.url.full` | string | Git remote URL |
+| `gen_ai.tool.output.title` | string | Tool output title (set on completion) |
+| `gen_ai.tool.output.metadata.*` | string | Flattened tool output metadata (max 32 keys, depth 3, strings truncated to 256 chars) |
+| `code.language` | string | Detected programming language (edit, write, and apply_patch tools only; derived from file extension) |
+
+#### `session_compaction` — Context Compaction Span
+
+Created as an instant span when OpenCode compacts the conversation context.
+
+| Attribute | Type | Description |
+|---|---|---|
+| `gen_ai.conversation.id` | string | OpenCode session ID |
+| `vcs.repository.ref.name` | string | Current git branch |
+| `enduser.id` | string | Git author email |
+| `vcs.repository.url.full` | string | Git remote URL |
 
 ### Metrics
 
-| Metric | Type | Unit | Description |
-|---|---|---|---|
-| `gen_ai.client.token.usage` | Histogram | `{token}` | Input/output tokens per LLM call |
-| `gen_ai.client.operation.duration` | Histogram | `s` | LLM call duration |
-| `opencode.session.request.count` | Counter | `{request}` | LLM requests per session |
-| `opencode.session.compaction.count` | Counter | `{compaction}` | Context compactions |
-| `opencode.file.changes` | Counter | `{line}` | Lines added/removed |
-| `opencode.tool.invocations` | Counter | `{invocation}` | Tool calls |
+#### `gen_ai.client.token.usage` — Token Usage
+
+Histogram measuring token consumption per LLM call. Unit: `{token}`.
+
+| Attribute | Type | Description |
+|---|---|---|
+| `gen_ai.operation.name` | string | Always `"chat"` |
+| `gen_ai.provider.name` | string | Provider identifier |
+| `gen_ai.request.model` | string | Model ID |
+| `gen_ai.token.type` | string | `"input"` or `"output"` — recorded as two separate data points per call |
+
+#### `gen_ai.client.operation.duration` — LLM Call Duration
+
+Histogram measuring LLM request latency. Unit: `s` (seconds).
+
+| Attribute | Type | Description |
+|---|---|---|
+| `gen_ai.operation.name` | string | Always `"chat"` |
+| `gen_ai.provider.name` | string | Provider identifier |
+| `gen_ai.request.model` | string | Model ID |
+| `error.type` | string | Error class name (present only on failed requests) |
+
+#### `opencode.session.request.count` — LLM Request Count
+
+Counter tracking total LLM requests. Unit: `{request}`.
+
+| Attribute | Type | Description |
+|---|---|---|
+| `gen_ai.request.model` | string | Model ID |
+| `gen_ai.provider.name` | string | Provider identifier |
+
+#### `opencode.session.compaction.count` — Compaction Count
+
+Counter tracking context compaction events. Unit: `{compaction}`. No attributes.
+
+#### `opencode.file.changes` — File Change Lines
+
+Counter tracking lines of code added or removed by edit, write, and apply_patch tools. Unit: `{line}`.
+
+| Attribute | Type | Description |
+|---|---|---|
+| `code.language` | string | Detected programming language (omitted for unknown file extensions) |
+| `opencode.change.type` | string | `"added"` or `"removed"` |
+
+#### `opencode.tool.invocations` — Tool Invocation Count
+
+Counter tracking tool executions. Unit: `{invocation}`.
+
+| Attribute | Type | Description |
+|---|---|---|
+| `gen_ai.tool.name` | string | Tool name (e.g., `edit`, `bash`, `glob`, `read`) |
 
 ### Resource Attributes
 
-Attached to all signals, identifying the session:
+Attached to all exported signals (traces and metrics), identifying the session environment. Set once at plugin initialization.
 
-| Attribute | Source |
-|---|---|
-| `service.name` | Always `"opencode"` |
-| `service.version` | OpenCode version (set when available) |
-| `enduser.id` | `git config user.email` |
-| `host.name` | Machine hostname |
-| `opencode.project.name` | Project identifier |
-| `vcs.repository.url.full` | Git remote URL |
-| `vcs.repository.ref.name` | Current branch |
+| Attribute | Type | Description |
+|---|---|---|
+| `service.name` | string | Always `"opencode"` |
+| `host.name` | string | Machine hostname |
+| `enduser.id` | string | Git author email (`git config user.email`) |
+| `opencode.project.name` | string | Project identifier from OpenCode |
+| `vcs.repository.url.full` | string | Git remote URL |
+| `vcs.repository.ref.name` | string | Current git branch |
+| `opencode.worktree` | string | Git worktree path |
+| `opencode.directory` | string | Current working directory |
 
 ## Troubleshooting
 
@@ -209,7 +317,7 @@ This plugin follows [OpenTelemetry GenAI Semantic Conventions](https://opentelem
 git clone https://github.com/felixti/opencode-otel-plugin.git
 cd opencode-otel-plugin
 bun install
-bun test             # 55 tests, 96 assertions
+bun test             # 62 tests, 103 assertions
 bun run typecheck    # tsc --noEmit
 bun run build        # dist/index.js + dist/index.d.ts
 ```
