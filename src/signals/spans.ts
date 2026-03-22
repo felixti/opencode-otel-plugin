@@ -1,12 +1,13 @@
 import { type Context, type Span, SpanKind, type Tracer, context as otelContext, trace } from "@opentelemetry/api"
+import { truncate } from "../utils/truncate"
 
 export function startSessionSpan(tracer: Tracer, sessionID: string): { span: Span; context: Context } {
   const span = tracer.startSpan("invoke_agent opencode", {
     kind: SpanKind.INTERNAL,
     attributes: {
-      "gen_ai.operation.name": "invoke_agent",
-      "gen_ai.agent.name": "opencode",
-      "gen_ai.conversation.id": sessionID,
+      "gen_ai.operation.name": truncate("invoke_agent"),
+      "gen_ai.agent.name": truncate("opencode"),
+      "gen_ai.conversation.id": truncate(sessionID),
     },
   })
   const ctx = trace.setSpan(otelContext.active(), span)
@@ -18,14 +19,14 @@ export function startChatSpan(
   opts: { model: string; provider: string; sessionID: string; branch?: string },
   parentContext?: Context,
 ): Span {
-  return tracer.startSpan(`chat ${opts.model}`, {
+  return tracer.startSpan(`chat ${truncate(opts.model)}`, {
     kind: SpanKind.CLIENT,
     attributes: {
-      "gen_ai.operation.name": "chat",
-      "gen_ai.provider.name": opts.provider,
-      "gen_ai.request.model": opts.model,
-      "gen_ai.conversation.id": opts.sessionID,
-      ...(opts.branch ? { "vcs.repository.ref.name": opts.branch } : {}),
+      "gen_ai.operation.name": truncate("chat"),
+      "gen_ai.provider.name": truncate(opts.provider),
+      "gen_ai.request.model": truncate(opts.model),
+      "gen_ai.conversation.id": truncate(opts.sessionID),
+      ...(opts.branch ? { "vcs.repository.ref.name": truncate(opts.branch) } : {}),
     },
   }, parentContext)
 }
@@ -35,14 +36,14 @@ export function startToolSpan(
   opts: { toolName: string; callID: string; sessionID: string; branch?: string },
   parentContext?: Context,
 ): Span {
-  return tracer.startSpan(`execute_tool ${opts.toolName}`, {
+  return tracer.startSpan(`execute_tool ${truncate(opts.toolName)}`, {
     kind: SpanKind.INTERNAL,
     attributes: {
-      "gen_ai.operation.name": "execute_tool",
-      "gen_ai.tool.name": opts.toolName,
-      "gen_ai.tool.call.id": opts.callID,
-      "gen_ai.conversation.id": opts.sessionID,
-      ...(opts.branch ? { "vcs.repository.ref.name": opts.branch } : {}),
+      "gen_ai.operation.name": truncate("execute_tool"),
+      "gen_ai.tool.name": truncate(opts.toolName),
+      "gen_ai.tool.call.id": truncate(opts.callID),
+      "gen_ai.conversation.id": truncate(opts.sessionID),
+      ...(opts.branch ? { "vcs.repository.ref.name": truncate(opts.branch) } : {}),
     },
   }, parentContext)
 }
@@ -56,30 +57,43 @@ export function startFileEditSpan(
     linesRemoved: number
     sessionID: string
     branch?: string
+    gitAuthor?: string
+    repoUrl?: string
   },
   parentContext?: Context,
 ): Span {
-  const span = tracer.startSpan(`file_edit ${opts.filepath}`, {
+  const span = tracer.startSpan("file_edit", {
     kind: SpanKind.INTERNAL,
     attributes: {
-      "gen_ai.conversation.id": opts.sessionID,
-      "code.filepath": opts.filepath,
-      "code.language": opts.language,
+      "gen_ai.conversation.id": truncate(opts.sessionID),
+      "code.filepath": truncate(opts.filepath),
+      "code.language": truncate(opts.language),
       "opencode.file.lines_added": opts.linesAdded,
       "opencode.file.lines_removed": opts.linesRemoved,
-      ...(opts.branch ? { "vcs.repository.ref.name": opts.branch } : {}),
+      ...(opts.branch ? { "vcs.repository.ref.name": truncate(opts.branch) } : {}),
+      ...(opts.gitAuthor ? { "enduser.id": truncate(opts.gitAuthor) } : {}),
+      ...(opts.repoUrl ? { "vcs.repository.url.full": truncate(opts.repoUrl) } : {}),
     },
   }, parentContext)
   span.end()
   return span
 }
 
-export function startCompactionSpan(tracer: Tracer, sessionID: string, parentContext?: Context, branch?: string): Span {
+export function startCompactionSpan(
+  tracer: Tracer,
+  sessionID: string,
+  parentContext?: Context,
+  branch?: string,
+  gitAuthor?: string,
+  repoUrl?: string,
+): Span {
   const span = tracer.startSpan("session_compaction", {
     kind: SpanKind.INTERNAL,
     attributes: {
-      "gen_ai.conversation.id": sessionID,
-      ...(branch ? { "vcs.repository.ref.name": branch } : {}),
+      "gen_ai.conversation.id": truncate(sessionID),
+      ...(branch ? { "vcs.repository.ref.name": truncate(branch) } : {}),
+      ...(gitAuthor ? { "enduser.id": truncate(gitAuthor) } : {}),
+      ...(repoUrl ? { "vcs.repository.url.full": truncate(repoUrl) } : {}),
     },
   }, parentContext)
   span.end()

@@ -97,7 +97,7 @@ describe("startFileEditSpan", () => {
     span.end()
 
     const spans = exporter.getFinishedSpans()
-    const fileSpan = spans.find((s) => s.name === "file_edit src/index.ts")
+     const fileSpan = spans.find((s) => s.name === "file_edit")
     expect(fileSpan).toBeDefined()
     expect(fileSpan!.attributes["code.filepath"]).toBe("src/index.ts")
     expect(fileSpan!.attributes["code.language"]).toBe("typescript")

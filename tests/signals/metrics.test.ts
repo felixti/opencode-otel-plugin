@@ -40,27 +40,23 @@ describe("createMetricInstruments", () => {
       instruments.requestCount.add(1, {
         "gen_ai.request.model": "gpt-4",
         "gen_ai.provider.name": "openai",
-        "gen_ai.conversation.id": "sess_1",
       })
     }).not.toThrow()
 
     expect(() => {
-      instruments.compactionCount.add(1, {
-        "gen_ai.conversation.id": "sess_1",
-      })
+      instruments.compactionCount.add(1, {})
     }).not.toThrow()
 
     expect(() => {
       instruments.fileChanges.add(10, {
-        "code.filepath": "src/index.ts",
         "opencode.change.type": "added",
+        "code.language": "typescript",
       })
     }).not.toThrow()
 
     expect(() => {
       instruments.toolInvocations.add(1, {
         "gen_ai.tool.name": "read",
-        "gen_ai.conversation.id": "sess_1",
       })
     }).not.toThrow()
   })

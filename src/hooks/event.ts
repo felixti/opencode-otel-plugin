@@ -3,9 +3,9 @@ import type { PluginState, FileChangeStats } from "../types"
 import type { MetricInstruments } from "../signals/metrics"
 import { startSessionSpan, startFileEditSpan, startCompactionSpan } from "../signals/spans"
 import { extractFileChanges } from "../utils/diff"
-import { detectLanguage } from "../utils/language"
 import { flushProviders } from "../telemetry/shutdown"
 import type { Providers } from "../telemetry/provider"
+import { truncate } from "../utils/truncate"
 
 interface EventHookDeps {
   tracer: Tracer
@@ -22,14 +22,21 @@ export function createEventHook(deps: EventHookDeps) {
       case "session.created": {
         const sessionID = event.properties.info?.id
         if (!sessionID) break
+        await state.gitReady
         const { span, context } = startSessionSpan(tracer, sessionID)
         if (state.opencodeVersion) {
-          span.setAttribute("service.version", state.opencodeVersion)
+          span.setAttribute("service.version", truncate(state.opencodeVersion))
         }
         if (state.currentBranch) {
-          span.setAttribute("vcs.repository.ref.name", state.currentBranch)
+          span.setAttribute("vcs.repository.ref.name", truncate(state.currentBranch))
         }
-        state.sessionSpans.set(sessionID, { span, context, sessionID, requestCount: 0 })
+        if (state.gitAuthor) {
+          span.setAttribute("enduser.id", truncate(state.gitAuthor))
+        }
+        if (state.repoUrl) {
+          span.setAttribute("vcs.repository.url.full", truncate(state.repoUrl))
+        }
+        state.sessionSpans.set(sessionID, { span, context, sessionID, requestCount: 0, lastActivityAt: Date.now() })
         break
       }
 
@@ -41,7 +48,18 @@ export function createEventHook(deps: EventHookDeps) {
           session.span.end()
           state.sessionSpans.delete(sessionID)
         }
-        await flushProviders(providers)
+        for (const [key, entry] of state.toolSpans) {
+          if (entry.sessionID === sessionID) {
+            entry.span.end()
+            state.toolSpans.delete(key)
+          }
+        }
+        state.pendingChatRequests.delete(sessionID)
+        const now = Date.now()
+        if (!state.lastFlushTime || now - state.lastFlushTime >= 30_000) {
+          state.lastFlushTime = now
+          await flushProviders(providers)
+        }
         break
       }
 
@@ -50,23 +68,29 @@ export function createEventHook(deps: EventHookDeps) {
         const diffs = event.properties.diff as Array<{ path: string; additions?: number; deletions?: number }> | undefined
         if (!diffs?.length) break
 
+        await state.gitReady
         const session = state.sessionSpans.get(sessionID)
+        if (session) session.lastActivityAt = Date.now()
         const changes: FileChangeStats[] = extractFileChanges(diffs)
         for (const change of changes) {
-          startFileEditSpan(tracer, { ...change, sessionID, branch: state.currentBranch }, session?.context)
+          startFileEditSpan(tracer, {
+            ...change,
+            sessionID,
+            branch: state.currentBranch,
+            gitAuthor: state.gitAuthor,
+            repoUrl: state.repoUrl,
+          }, session?.context)
 
           if (change.linesAdded > 0) {
             instruments.fileChanges.add(change.linesAdded, {
-              "opencode.change.type": "added",
-              "code.language": change.language,
-              "code.filepath": change.filepath,
+              "opencode.change.type": truncate("added"),
+              "code.language": truncate(change.language),
             })
           }
           if (change.linesRemoved > 0) {
             instruments.fileChanges.add(change.linesRemoved, {
-              "opencode.change.type": "removed",
-              "code.language": change.language,
-              "code.filepath": change.filepath,
+              "opencode.change.type": truncate("removed"),
+              "code.language": truncate(change.language),
             })
           }
         }
@@ -75,11 +99,11 @@ export function createEventHook(deps: EventHookDeps) {
 
       case "session.compacted": {
         const sessionID = event.properties.sessionID as string
+        await state.gitReady
         const session = state.sessionSpans.get(sessionID)
-        startCompactionSpan(tracer, sessionID, session?.context, state.currentBranch)
-        instruments.compactionCount.add(1, {
-          "gen_ai.conversation.id": sessionID,
-        })
+        if (session) session.lastActivityAt = Date.now()
+        startCompactionSpan(tracer, sessionID, session?.context, state.currentBranch, state.gitAuthor, state.repoUrl)
+        instruments.compactionCount.add(1, {})
         break
       }
 
@@ -87,19 +111,11 @@ export function createEventHook(deps: EventHookDeps) {
         state.currentBranch = event.properties.branch ?? state.currentBranch
         if (state.currentBranch) {
           for (const session of state.sessionSpans.values()) {
-            session.span.setAttribute("vcs.repository.ref.name", state.currentBranch)
+            session.span.setAttribute("vcs.repository.ref.name", truncate(state.currentBranch))
           }
-          for (const span of state.toolSpans.values()) {
-            span.setAttribute("vcs.repository.ref.name", state.currentBranch)
+          for (const entry of state.toolSpans.values()) {
+            entry.span.setAttribute("vcs.repository.ref.name", truncate(state.currentBranch))
           }
-        }
-        break
-      }
-
-      case "file.edited": {
-        const filePath = event.properties.file as string | undefined
-        if (filePath) {
-          detectLanguage(filePath)
         }
         break
       }

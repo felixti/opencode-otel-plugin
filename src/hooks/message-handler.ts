@@ -3,6 +3,7 @@ import type { PluginState } from "../types"
 import type { MetricInstruments } from "../signals/metrics"
 import { shutdownProviders } from "../telemetry/shutdown"
 import type { Providers } from "../telemetry/provider"
+import { truncate } from "../utils/truncate"
 
 export function handleMessageUpdated(
   msg: AssistantMessage,
@@ -10,9 +11,11 @@ export function handleMessageUpdated(
   instruments: MetricInstruments,
 ): void {
   const sessionID = msg.sessionID
-  const chatSpan = state.toolSpans.get(`chat:${sessionID}`)
+  const session = state.sessionSpans.get(sessionID)
+  if (session) session.lastActivityAt = Date.now()
+  const chatEntry = state.toolSpans.get(`chat:${sessionID}`)
   const chatReq = state.pendingChatRequests.get(sessionID)
-  if (!chatSpan || !chatReq) return
+  if (!chatEntry || !chatReq) return
 
   // Only end the chat span when token usage is actually available.
   // message.updated fires multiple times; wait for the one with tokens.
@@ -24,44 +27,53 @@ export function handleMessageUpdated(
   const errorType = msg.error?.name
 
   if (inputTokens != null) {
-    chatSpan.setAttribute("gen_ai.usage.input_tokens", inputTokens)
+    chatEntry.span.setAttribute("gen_ai.usage.input_tokens", inputTokens)
   }
   if (outputTokens != null) {
-    chatSpan.setAttribute("gen_ai.usage.output_tokens", outputTokens)
+    chatEntry.span.setAttribute("gen_ai.usage.output_tokens", outputTokens)
   }
-  chatSpan.setAttribute("gen_ai.response.model", chatReq.model)
+  chatEntry.span.setAttribute("gen_ai.response.model", truncate(chatReq.model))
   if (msg.finish) {
-    chatSpan.setAttribute("gen_ai.response.finish_reasons", [msg.finish])
+    chatEntry.span.setAttribute("gen_ai.response.finish_reasons", [truncate(msg.finish)])
   }
   if (errorType) {
-    chatSpan.setAttribute("error.type", errorType)
-    chatSpan.setStatus({ code: 2, message: errorType })
+    chatEntry.span.setAttribute("error.type", truncate(errorType))
+    chatEntry.span.setStatus({ code: 2, message: truncate(errorType) })
   }
-  chatSpan.end()
+  chatEntry.span.end()
   state.toolSpans.delete(`chat:${sessionID}`)
 
   const durationS = (Date.now() - chatReq.startTime) / 1000
-  const metricAttrs = {
-    "gen_ai.operation.name": "chat",
-    "gen_ai.provider.name": chatReq.provider,
-    "gen_ai.request.model": chatReq.model,
-  }
   if (inputTokens != null) {
     instruments.tokenUsage.record(inputTokens, {
-      ...metricAttrs,
-      "gen_ai.token.type": "input",
+      "gen_ai.operation.name": truncate("chat"),
+      "gen_ai.provider.name": truncate(chatReq.provider),
+      "gen_ai.request.model": truncate(chatReq.model),
+      "gen_ai.token.type": truncate("input"),
     })
   }
   if (outputTokens != null) {
     instruments.tokenUsage.record(outputTokens, {
-      ...metricAttrs,
-      "gen_ai.token.type": "output",
+      "gen_ai.operation.name": truncate("chat"),
+      "gen_ai.provider.name": truncate(chatReq.provider),
+      "gen_ai.request.model": truncate(chatReq.model),
+      "gen_ai.token.type": truncate("output"),
     })
   }
-  instruments.operationDuration.record(durationS, {
-    ...metricAttrs,
-    ...(errorType ? { "error.type": errorType } : {}),
-  })
+  if (errorType) {
+    instruments.operationDuration.record(durationS, {
+      "gen_ai.operation.name": truncate("chat"),
+      "gen_ai.provider.name": truncate(chatReq.provider),
+      "gen_ai.request.model": truncate(chatReq.model),
+      "error.type": truncate(errorType),
+    })
+  } else {
+    instruments.operationDuration.record(durationS, {
+      "gen_ai.operation.name": truncate("chat"),
+      "gen_ai.provider.name": truncate(chatReq.provider),
+      "gen_ai.request.model": truncate(chatReq.model),
+    })
+  }
 
   state.pendingChatRequests.delete(sessionID)
 }
@@ -74,22 +86,22 @@ export function handleSessionError(
   const sessionID = event.properties.sessionID
   if (!sessionID) return
 
-  const chatSpan = state.toolSpans.get(`chat:${sessionID}`)
+  const chatEntry = state.toolSpans.get(`chat:${sessionID}`)
   const chatReq = state.pendingChatRequests.get(sessionID)
-  if (!chatSpan || !chatReq) return
+  if (!chatEntry || !chatReq) return
 
   const errorType = event.properties.error?.name ?? "UnknownError"
-  chatSpan.setAttribute("error.type", errorType)
-  chatSpan.setStatus({ code: 2, message: errorType })
-  chatSpan.end()
+  chatEntry.span.setAttribute("error.type", truncate(errorType))
+  chatEntry.span.setStatus({ code: 2, message: truncate(errorType) })
+  chatEntry.span.end()
   state.toolSpans.delete(`chat:${sessionID}`)
 
   const durationS = (Date.now() - chatReq.startTime) / 1000
   instruments.operationDuration.record(durationS, {
-    "gen_ai.operation.name": "chat",
-    "gen_ai.provider.name": chatReq.provider,
-    "gen_ai.request.model": chatReq.model,
-    "error.type": errorType,
+    "gen_ai.operation.name": truncate("chat"),
+    "gen_ai.provider.name": truncate(chatReq.provider),
+    "gen_ai.request.model": truncate(chatReq.model),
+    "error.type": truncate(errorType),
   })
 
   state.pendingChatRequests.delete(sessionID)
@@ -99,12 +111,13 @@ export async function handleServerDisposed(
   state: PluginState,
   providers: Providers,
 ): Promise<void> {
+  if (state.sweepInterval) clearInterval(state.sweepInterval)
   for (const session of state.sessionSpans.values()) {
     session.span.end()
   }
   state.sessionSpans.clear()
-  for (const span of state.toolSpans.values()) {
-    span.end()
+  for (const entry of state.toolSpans.values()) {
+    entry.span.end()
   }
   state.toolSpans.clear()
   state.pendingChatRequests.clear()

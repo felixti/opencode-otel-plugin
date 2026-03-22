@@ -14,14 +14,22 @@ export function initProviders(resource: Resource): Providers {
   const traceExporter = new OTLPTraceExporter()
   const tracerProvider = new BasicTracerProvider({
     resource,
-    spanProcessors: [new BatchSpanProcessor(traceExporter)],
+    spanProcessors: [
+      new BatchSpanProcessor(traceExporter, {
+        maxQueueSize: 128,
+        maxExportBatchSize: 32,
+        scheduledDelayMillis: 15_000,
+        exportTimeoutMillis: 10_000,
+      }),
+    ],
   })
   trace.setGlobalTracerProvider(tracerProvider)
 
   const metricExporter = new OTLPMetricExporter()
   const metricReader = new PeriodicExportingMetricReader({
     exporter: metricExporter,
-    exportIntervalMillis: 30_000,
+    exportIntervalMillis: 60_000,
+    exportTimeoutMillis: 10_000,
   })
   const meterProvider = new MeterProvider({ resource, readers: [metricReader] })
   metrics.setGlobalMeterProvider(meterProvider)

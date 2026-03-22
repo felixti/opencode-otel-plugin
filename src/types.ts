@@ -9,6 +9,7 @@ export interface SessionSpanState {
   context: Context
   sessionID: string
   requestCount: number
+  lastActivityAt: number
 }
 
 /** Model/provider info captured in chat.params, used when ending chat spans. */
@@ -26,8 +27,14 @@ export interface FileChangeStats {
   language: string
 }
 
+export interface ToolSpanEntry {
+  span: Span
+  sessionID: string
+  createdAt: number
+}
+
 /** In-flight tool span keyed by callID. */
-export type ToolSpanMap = Map<string, Span>
+export type ToolSpanMap = Map<string, ToolSpanEntry>
 
 /** Plugin-wide mutable state shared across hooks. */
 export interface PluginState {
@@ -36,4 +43,9 @@ export interface PluginState {
   pendingChatRequests: Map<string, ChatRequestInfo>
   currentBranch: string | undefined
   opencodeVersion: string | undefined
+  gitAuthor: string | undefined
+  repoUrl: string | undefined
+  sweepInterval?: ReturnType<typeof setInterval>
+  lastFlushTime?: number
+  gitReady: Promise<void>
 }

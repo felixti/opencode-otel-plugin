@@ -2,6 +2,7 @@ import type { Tracer } from "@opentelemetry/api"
 import type { PluginState } from "../types"
 import type { MetricInstruments } from "../signals/metrics"
 import { startChatSpan } from "../signals/spans"
+import { truncate } from "../utils/truncate"
 
 interface ChatParamsHookDeps {
   tracer: Tracer
@@ -20,6 +21,7 @@ export function createChatParamsHook(deps: ChatParamsHookDeps) {
     const providerID = input.provider?.id ?? input.provider?.providerID ?? "unknown"
     const sessionID = input.sessionID
 
+    await state.gitReady
     const session = state.sessionSpans.get(sessionID)
     const span = startChatSpan(tracer, {
       model: modelID,
@@ -34,16 +36,23 @@ export function createChatParamsHook(deps: ChatParamsHookDeps) {
       startTime: Date.now(),
     })
 
+    if (state.gitAuthor) span.setAttribute("enduser.id", truncate(state.gitAuthor))
+    if (state.repoUrl) span.setAttribute("vcs.repository.url.full", truncate(state.repoUrl))
+
     instruments.requestCount.add(1, {
-      "gen_ai.request.model": modelID,
-      "gen_ai.provider.name": providerID,
-      "gen_ai.conversation.id": sessionID,
+      "gen_ai.request.model": truncate(modelID),
+      "gen_ai.provider.name": truncate(providerID),
     })
 
     if (session) {
       session.requestCount++
+      session.lastActivityAt = Date.now()
     }
 
-    state.toolSpans.set(`chat:${sessionID}`, span)
+    state.toolSpans.set(`chat:${sessionID}`, {
+      span,
+      sessionID,
+      createdAt: Date.now(),
+    })
   }
 }
