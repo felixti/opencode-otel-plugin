@@ -7,7 +7,7 @@ Unit tests using `bun:test`. Run with `bun test`.
 ```
 tests/
 ├── hooks/
-│   └── tool-execute.test.ts  # code.language attribute + opencode.file.changes metric on tool spans
+│   └── tool-execute.test.ts  # code.language, file.changes metric, span chaining on tool spans
 ├── signals/
 │   ├── metrics.test.ts       # MetricInstruments creation and recording
 │   └── spans.test.ts         # All 4 span helpers: names, kinds, attributes, context propagation
@@ -24,4 +24,4 @@ tests/
 - Use `describe`/`test`/`expect` from `bun:test`
 - OTel tests use real SDK instances (no mocks for `Tracer`/`Meter`) with in-memory exporters where needed
 - `hooks/` tests use their own `BasicTracerProvider` + `InMemorySpanExporter` (isolated from `spans.test.ts`)
-- 48 tests, 84 assertions total
+- 55 tests, 96 assertions total

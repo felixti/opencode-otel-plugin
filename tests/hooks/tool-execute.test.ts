@@ -5,6 +5,7 @@ import {
   SimpleSpanProcessor,
 } from "@opentelemetry/sdk-trace-base"
 import { createToolExecuteHooks } from "../../src/hooks/tool-execute"
+import { startSessionSpan } from "../../src/signals/spans"
 import type { MetricInstruments } from "../../src/signals/metrics"
 import type { PluginState } from "../../src/types"
 
@@ -187,5 +188,78 @@ describe("file changes metric", () => {
     expect(fileChangesSpy.calls).toEqual([
       { value: 8, attributes: { "code.language": "typescript", "opencode.change.type": "removed" } },
     ])
+  })
+})
+
+describe("span chaining", () => {
+  test("tool span is child of session span when session exists", async () => {
+    const sessionID = "sess_chain"
+    const session = startSessionSpan(tracer, sessionID)
+    state.sessionSpans.set(sessionID, {
+      span: session.span,
+      context: session.context,
+      sessionID,
+      requestCount: 0,
+      lastActivityAt: Date.now(),
+    })
+
+    const hooks = createToolExecuteHooks({ tracer, instruments, state })
+    await hooks.before({ tool: "bash", sessionID, callID: "call_chain" }, { args: {} })
+    await hooks.after(
+      { tool: "bash", sessionID, callID: "call_chain" },
+      { title: "Ran command", output: "ok", metadata: null },
+    )
+    session.span.end()
+
+    const spans = exporter.getFinishedSpans()
+    const parentSpan = spans.find((s) => s.name === "invoke_agent opencode")!
+    const childSpan = spans.find((s) => s.name === "execute_tool bash")!
+    expect(childSpan.parentSpanContext?.spanId).toBe(parentSpan.spanContext().spanId)
+    expect(childSpan.spanContext().traceId).toBe(parentSpan.spanContext().traceId)
+  })
+
+  test("tool span has no parent when session is absent", async () => {
+    const hooks = createToolExecuteHooks({ tracer, instruments, state })
+    await hooks.before({ tool: "bash", sessionID: "sess_missing", callID: "call_orphan" }, { args: {} })
+    await hooks.after(
+      { tool: "bash", sessionID: "sess_missing", callID: "call_orphan" },
+      { title: "Ran command", output: "ok", metadata: null },
+    )
+
+    const spans = exporter.getFinishedSpans()
+    const toolSpan = spans.find((s) => s.name === "execute_tool bash")!
+    expect(toolSpan.parentSpanContext).toBeUndefined()
+  })
+
+  test("multiple tool spans share same trace as session", async () => {
+    const sessionID = "sess_multi"
+    const session = startSessionSpan(tracer, sessionID)
+    state.sessionSpans.set(sessionID, {
+      span: session.span,
+      context: session.context,
+      sessionID,
+      requestCount: 0,
+      lastActivityAt: Date.now(),
+    })
+
+    const hooks = createToolExecuteHooks({ tracer, instruments, state })
+    await hooks.before({ tool: "edit", sessionID, callID: "call_a" }, { args: {} })
+    await hooks.after(
+      { tool: "edit", sessionID, callID: "call_a" },
+      { title: "Edited", output: "ok", metadata: { path: "/a.ts" } },
+    )
+    await hooks.before({ tool: "bash", sessionID, callID: "call_b" }, { args: {} })
+    await hooks.after(
+      { tool: "bash", sessionID, callID: "call_b" },
+      { title: "Ran", output: "ok", metadata: null },
+    )
+    session.span.end()
+
+    const spans = exporter.getFinishedSpans()
+    const sessionTraceId = spans.find((s) => s.name === "invoke_agent opencode")!.spanContext().traceId
+    const editSpan = spans.find((s) => s.name === "execute_tool edit")!
+    const bashSpan = spans.find((s) => s.name === "execute_tool bash")!
+    expect(editSpan.spanContext().traceId).toBe(sessionTraceId)
+    expect(bashSpan.spanContext().traceId).toBe(sessionTraceId)
   })
 })

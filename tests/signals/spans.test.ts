@@ -96,3 +96,68 @@ describe("startCompactionSpan", () => {
     expect(compSpan!.attributes["gen_ai.operation.name"]).toBeUndefined()
   })
 })
+
+describe("context propagation", () => {
+  test("chat span is child of session span", () => {
+    const tracer = trace.getTracer("test")
+    const session = startSessionSpan(tracer, "sess_ctx")
+    const chatSpan = startChatSpan(tracer, {
+      model: "gpt-4",
+      provider: "openai",
+      sessionID: "sess_ctx",
+    }, session.context)
+    chatSpan.end()
+    session.span.end()
+
+    const spans = exporter.getFinishedSpans()
+    const parent = spans.find((s) => s.name === "invoke_agent opencode")!
+    const child = spans.find((s) => s.name === "chat gpt-4")!
+    expect(child.parentSpanContext?.spanId).toBe(parent.spanContext().spanId)
+    expect(child.spanContext().traceId).toBe(parent.spanContext().traceId)
+  })
+
+  test("tool span is child of session span", () => {
+    const tracer = trace.getTracer("test")
+    const session = startSessionSpan(tracer, "sess_ctx")
+    const toolSpan = startToolSpan(tracer, {
+      toolName: "bash",
+      callID: "call_ctx",
+      sessionID: "sess_ctx",
+    }, session.context)
+    toolSpan.end()
+    session.span.end()
+
+    const spans = exporter.getFinishedSpans()
+    const parent = spans.find((s) => s.name === "invoke_agent opencode")!
+    const child = spans.find((s) => s.name === "execute_tool bash")!
+    expect(child.parentSpanContext?.spanId).toBe(parent.spanContext().spanId)
+    expect(child.spanContext().traceId).toBe(parent.spanContext().traceId)
+  })
+
+  test("compaction span is child of session span", () => {
+    const tracer = trace.getTracer("test")
+    const session = startSessionSpan(tracer, "sess_ctx")
+    startCompactionSpan(tracer, "sess_ctx", session.context)
+    session.span.end()
+
+    const spans = exporter.getFinishedSpans()
+    const parent = spans.find((s) => s.name === "invoke_agent opencode")!
+    const child = spans.find((s) => s.name === "session_compaction")!
+    expect(child.parentSpanContext?.spanId).toBe(parent.spanContext().spanId)
+    expect(child.spanContext().traceId).toBe(parent.spanContext().traceId)
+  })
+
+  test("span without parentContext has no parent", () => {
+    const tracer = trace.getTracer("test")
+    const chatSpan = startChatSpan(tracer, {
+      model: "gpt-4",
+      provider: "openai",
+      sessionID: "sess_orphan",
+    })
+    chatSpan.end()
+
+    const spans = exporter.getFinishedSpans()
+    const orphan = spans.find((s) => s.name === "chat gpt-4")!
+    expect(orphan.parentSpanContext).toBeUndefined()
+  })
+})
