@@ -100,16 +100,23 @@ function countLines(content: string): number {
   return count
 }
 
-/** Record file change metrics from edit/write/apply_patch tool metadata. */
+interface FileChangeTotals {
+  additions: number
+  deletions: number
+}
+
+/** Record file change metrics and return totals for span attributes. */
 function recordFileChanges(
   instruments: MetricInstruments,
   tool: string,
   meta: Record<string, unknown>,
   args?: unknown,
-): void {
+): FileChangeTotals {
+  const totals: FileChangeTotals = { additions: 0, deletions: 0 }
+
   if (tool === "apply_patch") {
     const files = meta.files
-    if (!Array.isArray(files)) return
+    if (!Array.isArray(files)) return totals
     for (const file of files) {
       if (!file || typeof file !== "object") continue
       const f = file as Record<string, unknown>
@@ -119,6 +126,8 @@ function recordFileChanges(
       if (language && language !== "unknown") attrs["code.language"] = language
       const add = typeof f.additions === "number" ? f.additions : 0
       const del = typeof f.deletions === "number" ? f.deletions : 0
+      totals.additions += add
+      totals.deletions += del
       if (add > 0) {
         instruments.fileChanges.add(add, { ...attrs, "opencode.change.type": "added" })
       }
@@ -126,48 +135,46 @@ function recordFileChanges(
         instruments.fileChanges.add(del, { ...attrs, "opencode.change.type": "removed" })
       }
     }
-    return
+    return totals
   }
-
-  let additions = 0
-  let deletions = 0
 
   if (tool === "edit") {
     const filediff = meta.filediff
     if (filediff && typeof filediff === "object") {
       const fd = filediff as Record<string, unknown>
-      if (typeof fd.additions === "number") additions = fd.additions
-      if (typeof fd.deletions === "number") deletions = fd.deletions
+      if (typeof fd.additions === "number") totals.additions = fd.additions
+      if (typeof fd.deletions === "number") totals.deletions = fd.deletions
     }
-    if (additions === 0 && deletions === 0) {
-      if (typeof meta.additions === "number") additions = meta.additions
-      if (typeof meta.removals === "number") deletions = meta.removals
+    if (totals.additions === 0 && totals.deletions === 0) {
+      if (typeof meta.additions === "number") totals.additions = meta.additions
+      if (typeof meta.removals === "number") totals.deletions = meta.removals
     }
   } else if (tool === "write") {
-    if (typeof meta.additions === "number") additions = meta.additions
-    if (typeof meta.removals === "number") deletions = meta.removals
+    if (typeof meta.additions === "number") totals.additions = meta.additions
+    if (typeof meta.removals === "number") totals.deletions = meta.removals
     // Write tool metadata may lack additions/removals — compute from args.content
-    if (additions === 0 && deletions === 0 && args && typeof args === "object") {
+    if (totals.additions === 0 && totals.deletions === 0 && args && typeof args === "object") {
       const a = args as Record<string, unknown>
       if (typeof a.content === "string" && a.content.length > 0) {
-        additions = countLines(a.content)
+        totals.additions = countLines(a.content)
       }
     }
   }
 
-  if (additions === 0 && deletions === 0) return
+  if (totals.additions === 0 && totals.deletions === 0) return totals
 
   const filepath = resolveFilepath(meta)
   const language = filepath ? truncate(detectLanguage(filepath)) : undefined
   const attrs: Record<string, string> = {}
   if (language && language !== "unknown") attrs["code.language"] = language
 
-  if (additions > 0) {
-    instruments.fileChanges.add(additions, { ...attrs, "opencode.change.type": "added" })
+  if (totals.additions > 0) {
+    instruments.fileChanges.add(totals.additions, { ...attrs, "opencode.change.type": "added" })
   }
-  if (deletions > 0) {
-    instruments.fileChanges.add(deletions, { ...attrs, "opencode.change.type": "removed" })
+  if (totals.deletions > 0) {
+    instruments.fileChanges.add(totals.deletions, { ...attrs, "opencode.change.type": "removed" })
   }
+  return totals
 }
 
 export function createToolExecuteHooks(deps: ToolExecuteHookDeps) {
@@ -228,7 +235,13 @@ export function createToolExecuteHooks(deps: ToolExecuteHookDeps) {
           if (filepath) {
             entry.span.setAttribute("code.language", truncate(detectLanguage(filepath)))
           }
-          recordFileChanges(instruments, input.tool, meta, input.args)
+          const totals = recordFileChanges(instruments, input.tool, meta, input.args)
+          if (totals.additions > 0) {
+            entry.span.setAttribute("opencode.file.additions", totals.additions)
+          }
+          if (totals.deletions > 0) {
+            entry.span.setAttribute("opencode.file.deletions", totals.deletions)
+          }
         }
       }
       entry.span.end()

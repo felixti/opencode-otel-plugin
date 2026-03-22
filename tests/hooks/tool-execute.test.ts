@@ -269,6 +269,54 @@ describe("file changes metric", () => {
   })
 })
 
+describe("file change span attributes", () => {
+  test("sets additions and deletions on edit tool span", async () => {
+    const spans = await runToolHook("edit", {
+      filediff: { file: "/src/index.ts", additions: 10, deletions: 3 },
+    })
+    expect(spans[0].attributes["opencode.file.additions"]).toBe(10)
+    expect(spans[0].attributes["opencode.file.deletions"]).toBe(3)
+  })
+
+  test("sets additions on write tool span from args.content", async () => {
+    const spans = await runToolHook(
+      "write",
+      { filepath: "/src/new.ts", exists: false, diagnostics: {} },
+      "call_1",
+      "sess_1",
+      { content: "line1\nline2\nline3\n", filePath: "/src/new.ts" },
+    )
+    expect(spans[0].attributes["opencode.file.additions"]).toBe(3)
+    expect(spans[0].attributes["opencode.file.deletions"]).toBeUndefined()
+  })
+
+  test("sets additions and deletions on apply_patch span (summed across files)", async () => {
+    const spans = await runToolHook("apply_patch", {
+      files: [
+        { filePath: "/src/a.ts", additions: 5, deletions: 2, diff: "...", type: "update" },
+        { filePath: "/src/b.py", additions: 3, deletions: 1, diff: "...", type: "update" },
+      ],
+      diagnostics: {},
+    })
+    expect(spans[0].attributes["opencode.file.additions"]).toBe(8)
+    expect(spans[0].attributes["opencode.file.deletions"]).toBe(3)
+  })
+
+  test("omits attributes when counts are zero", async () => {
+    const spans = await runToolHook("edit", {
+      filediff: { file: "/a.ts", additions: 0, deletions: 0 },
+    })
+    expect(spans[0].attributes["opencode.file.additions"]).toBeUndefined()
+    expect(spans[0].attributes["opencode.file.deletions"]).toBeUndefined()
+  })
+
+  test("not set for non-file-changing tools", async () => {
+    const spans = await runToolHook("bash", { path: "/src/app.ts" })
+    expect(spans[0].attributes["opencode.file.additions"]).toBeUndefined()
+    expect(spans[0].attributes["opencode.file.deletions"]).toBeUndefined()
+  })
+})
+
 describe("span chaining", () => {
   test("tool span is child of session span when session exists", async () => {
     const sessionID = "sess_chain"
