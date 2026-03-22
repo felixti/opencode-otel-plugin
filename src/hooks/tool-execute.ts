@@ -3,6 +3,7 @@ import type { PluginState } from "../types"
 import type { MetricInstruments } from "../signals/metrics"
 import { startToolSpan } from "../signals/spans"
 import { truncate } from "../utils/truncate"
+import { detectLanguage } from "../utils/language"
 
 interface ToolExecuteHookDeps {
   tracer: Tracer
@@ -118,6 +119,13 @@ export function createToolExecuteHooks(deps: ToolExecuteHookDeps) {
               keyCount,
             )
           }
+        }
+      }
+      if (input.tool === "edit" && output.metadata && typeof output.metadata === "object") {
+        const filepath = (output.metadata as Record<string, unknown>).path
+          ?? (output.metadata as Record<string, unknown>).file
+        if (typeof filepath === "string") {
+          entry.span.setAttribute("code.language", truncate(detectLanguage(filepath)))
         }
       }
       entry.span.end()
