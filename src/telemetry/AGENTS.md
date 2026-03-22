@@ -17,8 +17,8 @@ Resource attributes: `service.name` ("opencode"), `host.name`, `enduser.id`, `op
 
 `initProviders(resource)` creates and registers:
 
-- `BasicTracerProvider` with `BatchSpanProcessor` → `OTLPTraceExporter` (OTLP/HTTP)
-- `MeterProvider` with `PeriodicExportingMetricReader` (30s interval) → `OTLPMetricExporter`
+- `BasicTracerProvider` with `BatchSpanProcessor` → `OTLPTraceExporter` (OTLP/HTTP protobuf)
+- `MeterProvider` with `PeriodicExportingMetricReader` (60s interval) → `OTLPMetricExporter`
 
 Both are registered as global providers via `trace.setGlobalTracerProvider()` and `metrics.setGlobalMeterProvider()`.
 

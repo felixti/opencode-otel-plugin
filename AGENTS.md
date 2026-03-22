@@ -111,8 +111,8 @@ Some event types are handled **directly in `src/index.ts`** rather than routed t
 | `@opentelemetry/api` | OTel API (tracer, meter, context, span) — `1.9.0` |
 | `@opentelemetry/sdk-trace-base` | BasicTracerProvider, BatchSpanProcessor — `2.6.0` |
 | `@opentelemetry/sdk-metrics` | MeterProvider, PeriodicExportingMetricReader — `2.6.0` |
-| `@opentelemetry/exporter-trace-otlp-http` | OTLP/HTTP trace exporter — `0.213.0` |
-| `@opentelemetry/exporter-metrics-otlp-http` | OTLP/HTTP metric exporter — `0.213.0` |
+| `@opentelemetry/exporter-trace-otlp-proto` | OTLP/HTTP (protobuf) trace exporter — `0.213.0` |
+| `@opentelemetry/exporter-metrics-otlp-proto` | OTLP/HTTP (protobuf) metric exporter — `0.213.0` |
 | `@opentelemetry/resources` | `resourceFromAttributes()` (SDK v2 API) — `2.6.0` |
 | `@opentelemetry/semantic-conventions` | Standard attribute constants |
 

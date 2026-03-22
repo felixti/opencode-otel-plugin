@@ -1,8 +1,8 @@
 import { trace, metrics } from "@opentelemetry/api"
 import { BasicTracerProvider, BatchSpanProcessor } from "@opentelemetry/sdk-trace-base"
 import { MeterProvider, PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics"
-import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http"
-import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http"
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto"
+import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-proto"
 import type { Resource } from "@opentelemetry/resources"
 
 export interface Providers {

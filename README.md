@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-OpenTelemetry instrumentation plugin for [OpenCode](https://opencode.ai). Automatically traces every AI coding session — LLM calls, tool executions, file edits, and context compactions — and exports them via OTLP/HTTP to any OpenTelemetry-compatible backend.
+OpenTelemetry instrumentation plugin for [OpenCode](https://opencode.ai). Automatically traces every AI coding session — LLM calls, tool executions, file edits, and context compactions — and exports them via OTLP/HTTP (protobuf) to any OpenTelemetry-compatible backend.
 
 ## Quick Start
 
@@ -68,6 +68,7 @@ All configuration uses standard [OpenTelemetry environment variables](https://op
 |---|---|---|
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP/HTTP base URL | `http://localhost:4318` |
 | `OTEL_EXPORTER_OTLP_HEADERS` | Auth headers (`key=value`, comma-separated) | — |
+| `OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE` | Metric temporality (`cumulative`, `delta`, `lowmemory`) | `cumulative` |
 
 ### Backend Examples
 
@@ -97,10 +98,12 @@ export OTEL_EXPORTER_OTLP_HEADERS="x-honeycomb-team=<your-api-key>"
 ```bash
 export OTEL_EXPORTER_OTLP_ENDPOINT="https://{your-environment-id}.live.dynatrace.com/api/v2/otlp"
 export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Api-Token {your-api-token}"
-export OTEL_EXPORTER_OTLP_PROTOCOL="http/protobuf"
+export OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE="delta"
 ```
 
 Create an API token in Dynatrace with `openTelemetryTrace.ingest` and `metrics.ingest` scopes.
+
+> **Note:** Dynatrace requires delta temporality for metrics — cumulative metrics are silently dropped. The `OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE=delta` setting is mandatory.
 
 </details>
 
