@@ -6,7 +6,7 @@ OpenTelemetry instrumentation plugin for [OpenCode](https://opencode.ai). Emits 
 
 ```bash
 bun install          # Install dependencies
-bun test             # Run all tests (bun:test, 55 tests / 96 assertions)
+bun test             # Run all tests (bun:test, 105 tests / 151 assertions)
 bun run typecheck    # Type-check with tsc --noEmit
 bun run build        # Bundle to dist/ (bun build + tsc --emitDeclarationOnly)
 ```
@@ -32,7 +32,7 @@ src/
 1. Plugin init (`src/index.ts`): gather git metadata → create OTel Resource → init TracerProvider + MeterProvider → create metric instruments → wire hooks
 2. `event` hook: dispatches to `hooks/event.ts` (session lifecycle, diffs, compactions, branch updates) or `hooks/message-handler.ts` (assistant message token recording, errors, shutdown)
 3. `chat.params` hook: starts a chat span and records LLM request count
-4. `tool.execute.before/after` hooks: bracket tool execution with spans and count invocations
+4. `tool.execute.before/after` hooks: bracket tool execution with spans, count invocations, and detect VCS operations
 5. On `session.idle`: end session span, flush providers
 6. On `server.instance.disposed`: end all open spans, shutdown providers
 
@@ -99,7 +99,7 @@ Some event types are handled **directly in `src/index.ts`** rather than routed t
 
 - `PluginState` (`types.ts`): mutable state shared across all hooks — maps of active session spans, tool spans, pending chat requests, current branch, opencode version
 - `SessionSpanState`: tracks a session's root span + context + request count
-- `MetricInstruments` (`signals/metrics.ts`): the 6 metric instruments created at init
+- `MetricInstruments` (`signals/metrics.ts`): the 7 metric instruments created at init
 - `ChatRequestInfo`: pending chat request info (model, provider, start time)
 - `Providers` (`telemetry/provider.ts`): `{ tracerProvider, meterProvider }` for shutdown/flush
 

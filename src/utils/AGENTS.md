@@ -23,6 +23,16 @@ All functions use a shared `shellGet()` helper that runs commands via `$\`sh -c 
 
 `truncate(value, maxLength)` → truncates strings for low-cardinality span attributes. Used by `setMetadataAttributes` in `hooks/tool-execute.ts` and for branch/version attributes.
 
-### `index.ts` — Barrel Export (3 lines)
+### `vcs-detect.ts` — VCS Operation Detection (71 lines)
 
-Re-exports `detectLanguage`, `getGitAuthor`, `getRepoUrl`, `getCurrentBranch`, `getHostname`, `truncate`.
+`classifyVcsOperation(tool, args)` → classifies a tool execution as a VCS operation or returns `null`. Pure function with no side effects.
+
+Types: `VcsOperation` (7-value union: `commit`, `pr_create`, `pr_merge`, `pr_close`, `pr_reopen`, `pr_review`, `pr_edit`), `VcsDetectionResult` (`{ operation, source }`).
+
+Detection channels:
+- **Bash CLI**: regex patterns match `git commit` and `gh pr {create,merge,close,reopen,review,edit}` in command strings, handling chained commands (`&&`, `;`) and env prefixes.
+- **MCP tools**: case-insensitive substring matching on tool names containing `pull_request`, with guards for copilot and branch-update variants.
+
+### `index.ts` — Barrel Export (4 lines)
+
+Re-exports `detectLanguage`, `getGitAuthor`, `getRepoUrl`, `getCurrentBranch`, `getHostname`, `truncate`, `classifyVcsOperation`, `VcsOperation`, `VcsDetectionResult`.

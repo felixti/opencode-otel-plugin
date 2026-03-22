@@ -4,9 +4,9 @@ OTel instrument definitions — span creation helpers and metric instrument fact
 
 ## Files
 
-### `metrics.ts` — Metric Instruments (39 lines)
+### `metrics.ts` — Metric Instruments (44 lines)
 
-Defines `MetricInstruments` interface and `createMetricInstruments(meter)` factory. Creates 6 instruments:
+Defines `MetricInstruments` interface and `createMetricInstruments(meter)` factory. Creates 7 instruments:
 
 | Instrument | Type | Name | Unit |
 |---|---|---|---|
@@ -16,10 +16,11 @@ Defines `MetricInstruments` interface and `createMetricInstruments(meter)` facto
 | `compactionCount` | Counter | `opencode.session.compaction.count` | `{compaction}` |
 | `fileChanges` | Counter | `opencode.file.changes` | `{line}` |
 | `toolInvocations` | Counter | `opencode.tool.invocations` | `{invocation}` |
+| `vcsOperations` | Counter | `opencode.vcs.operations` | `{operation}` |
 
-The first two follow GenAI semantic conventions; the last four are custom OpenCode metrics.
+The first two follow GenAI semantic conventions; the last five are custom OpenCode metrics.
 
-**Active usage**: All 6 instruments are actively recorded. `fileChanges` is recorded in `hooks/tool-execute.ts` for `edit` and `write` tool completions (additions/deletions from tool output metadata).
+**Active usage**: All 7 instruments are actively recorded. `fileChanges` is recorded in `hooks/tool-execute.ts` for `edit` and `write` tool completions (additions/deletions from tool output metadata). `vcsOperations` is recorded in `hooks/tool-execute.ts` for bash and MCP tool calls that match VCS operation patterns (git commit, PR mutations).
 
 ### `spans.ts` — Span Helpers (70 lines)
 

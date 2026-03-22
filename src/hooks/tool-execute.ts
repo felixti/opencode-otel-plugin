@@ -247,6 +247,7 @@ export function createToolExecuteHooks(deps: ToolExecuteHookDeps) {
       }
       entry.span.end()
 
+      // Record VCS metric after span ends — counts completed operations only
       const vcsResult = classifyVcsOperation(input.tool, input.args)
       if (vcsResult) {
         instruments.vcsOperations.add(1, {

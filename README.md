@@ -261,6 +261,15 @@ Counter tracking tool executions. Unit: `{invocation}`.
 |---|---|---|
 | `gen_ai.tool.name` | string | Tool name (e.g., `edit`, `bash`, `glob`, `read`) |
 
+#### `opencode.vcs.operations` — VCS Operation Count
+
+Counter tracking git commits and PR mutations performed during sessions. Unit: `{operation}`.
+
+| Attribute | Type | Description |
+|---|---|---|
+| `opencode.vcs.operation` | string | Operation type: `"commit"`, `"pr_create"`, `"pr_merge"`, `"pr_close"`, `"pr_reopen"`, `"pr_review"`, or `"pr_edit"` |
+| `opencode.vcs.source` | string | Detection source: `"cli"` (bash commands) or `"mcp"` (MCP tool names) |
+
 ### Resource Attributes
 
 Attached to all exported signals (traces and metrics), identifying the session environment. Set once at plugin initialization.
@@ -322,7 +331,7 @@ This plugin follows [OpenTelemetry GenAI Semantic Conventions](https://opentelem
 git clone https://github.com/felixti/opencode-otel-plugin.git
 cd opencode-otel-plugin
 bun install
-bun test             # 67 tests, 113 assertions
+bun test             # 105 tests, 151 assertions
 bun run typecheck    # tsc --noEmit
 bun run build        # dist/index.js + dist/index.d.ts
 ```

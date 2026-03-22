@@ -27,9 +27,9 @@ Three exported functions called directly from `src/index.ts`:
 
 Handles `chat.params` hook. Starts a `chat {model}` span as child of the session root, stores `ChatRequestInfo` for later use when the message response arrives, increments `opencode.session.request.count`.
 
-### `tool-execute.ts` — Tool Execute Hooks (189 lines)
+### `tool-execute.ts` — Tool Execute Hooks (264 lines)
 
-Handles `tool.execute.before` and `tool.execute.after`. Before: starts `execute_tool {toolName}` span, records `opencode.tool.invocations`. After: sets output attributes (title, metadata), ends span. For edit and write tool calls, detects `code.language` from the output metadata file path via `resolveFilepath()` + `detectLanguage()`, and records `opencode.file.changes` metric with additions/deletions via `recordFileChanges()`. Uses recursive `setMetadataAttributes()` to flatten nested metadata objects into dotted span attribute keys.
+Handles `tool.execute.before` and `tool.execute.after`. Before: starts `execute_tool {toolName}` span, records `opencode.tool.invocations`. After: sets output attributes (title, metadata), ends span. For edit and write tool calls, detects `code.language` from the output metadata file path via `resolveFilepath()` + `detectLanguage()`, and records `opencode.file.changes` metric with additions/deletions via `recordFileChanges()`. Uses recursive `setMetadataAttributes()` to flatten nested metadata objects into dotted span attribute keys. Also detects VCS operations (git commits, PR mutations) via `classifyVcsOperation()` from `utils/vcs-detect` and records `opencode.vcs.operations` counter metric.
 
 Helper functions:
 - `setMetadataAttributes(span, metadata, prefix, depth)` — recursively flattens metadata into span attributes (depth ≤ 3, max 32 keys, strings truncated to budget)
