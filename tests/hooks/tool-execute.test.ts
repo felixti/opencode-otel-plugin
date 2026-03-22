@@ -24,6 +24,7 @@ function createSpyCounter() {
 function createMockInstruments() {
   const fileChangesSpy = createSpyCounter()
   const toolInvocationsSpy = createSpyCounter()
+  const vcsOperationsSpy = createSpyCounter()
   const instruments = {
     tokenUsage: { record() {} },
     operationDuration: { record() {} },
@@ -31,8 +32,9 @@ function createMockInstruments() {
     compactionCount: { add() {} },
     fileChanges: fileChangesSpy,
     toolInvocations: toolInvocationsSpy,
+    vcsOperations: vcsOperationsSpy,
   } as unknown as MetricInstruments
-  return { instruments, fileChangesSpy, toolInvocationsSpy }
+  return { instruments, fileChangesSpy, toolInvocationsSpy, vcsOperationsSpy }
 }
 
 function createMockState(): PluginState {
@@ -57,12 +59,14 @@ const tracer = provider.getTracer("test")
 let state: PluginState
 let instruments: MetricInstruments
 let fileChangesSpy: ReturnType<typeof createSpyCounter>
+let vcsOperationsSpy: ReturnType<typeof createSpyCounter>
 
 beforeEach(() => {
   exporter.reset()
   const mocks = createMockInstruments()
   instruments = mocks.instruments
   fileChangesSpy = mocks.fileChangesSpy
+  vcsOperationsSpy = mocks.vcsOperationsSpy
   state = createMockState()
 })
 
@@ -314,6 +318,41 @@ describe("file change span attributes", () => {
     const spans = await runToolHook("bash", { path: "/src/app.ts" })
     expect(spans[0].attributes["opencode.file.additions"]).toBeUndefined()
     expect(spans[0].attributes["opencode.file.deletions"]).toBeUndefined()
+  })
+})
+
+describe("VCS operations metric", () => {
+  test("records git commit from bash tool", async () => {
+    await runToolHook("bash", null, "call_1", "sess_1", { command: "git commit -m \"feat: add feature\"" })
+    expect(vcsOperationsSpy.calls).toEqual([
+      { value: 1, attributes: { "opencode.vcs.operation": "commit", "opencode.vcs.source": "cli" } },
+    ])
+  })
+
+  test("records gh pr create from bash tool", async () => {
+    await runToolHook("bash", null, "call_1", "sess_1", { command: "gh pr create --title \"fix\"" })
+    expect(vcsOperationsSpy.calls).toEqual([
+      { value: 1, attributes: { "opencode.vcs.operation": "pr_create", "opencode.vcs.source": "cli" } },
+    ])
+  })
+
+  test("records MCP create_pull_request tool", async () => {
+    await runToolHook("mcp__github__create_pull_request", null, "call_1", "sess_1", {
+      owner: "org", repo: "repo", title: "PR", head: "feat", base: "main",
+    })
+    expect(vcsOperationsSpy.calls).toEqual([
+      { value: 1, attributes: { "opencode.vcs.operation": "pr_create", "opencode.vcs.source": "mcp" } },
+    ])
+  })
+
+  test("does not record for non-VCS bash tool", async () => {
+    await runToolHook("bash", null, "call_1", "sess_1", { command: "ls -la" })
+    expect(vcsOperationsSpy.calls).toHaveLength(0)
+  })
+
+  test("does not record for edit tool", async () => {
+    await runToolHook("edit", { path: "/src/app.ts" })
+    expect(vcsOperationsSpy.calls).toHaveLength(0)
   })
 })
 

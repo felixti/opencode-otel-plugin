@@ -4,6 +4,7 @@ import type { MetricInstruments } from "../signals/metrics"
 import { startToolSpan } from "../signals/spans"
 import { truncate } from "../utils/truncate"
 import { detectLanguage } from "../utils/language"
+import { classifyVcsOperation } from "../utils/vcs-detect"
 
 interface ToolExecuteHookDeps {
   tracer: Tracer
@@ -245,6 +246,15 @@ export function createToolExecuteHooks(deps: ToolExecuteHookDeps) {
         }
       }
       entry.span.end()
+
+      const vcsResult = classifyVcsOperation(input.tool, input.args)
+      if (vcsResult) {
+        instruments.vcsOperations.add(1, {
+          "opencode.vcs.operation": vcsResult.operation,
+          "opencode.vcs.source": vcsResult.source,
+        })
+      }
+
       state.toolSpans.delete(input.callID)
     }
   }
