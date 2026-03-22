@@ -7,6 +7,7 @@ export interface MetricInstruments {
   compactionCount: Counter
   fileChanges: Counter
   toolInvocations: Counter
+  vcsOperations: Counter
 }
 
 export function createMetricInstruments(meter: Meter): MetricInstruments {
@@ -34,6 +35,10 @@ export function createMetricInstruments(meter: Meter): MetricInstruments {
     toolInvocations: meter.createCounter("opencode.tool.invocations", {
       description: "Number of tool invocations",
       unit: "{invocation}",
+    }),
+    vcsOperations: meter.createCounter("opencode.vcs.operations", {
+      description: "VCS operations (commits, PR mutations) performed during sessions",
+      unit: "{operation}",
     }),
   }
 }
