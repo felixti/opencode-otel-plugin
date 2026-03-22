@@ -10,6 +10,7 @@
   ],
   "scripts": {
     "build": "bun build ./src/index.ts --outdir dist --target bun --minify && tsc --emitDeclarationOnly --outDir dist",
+    "prepare": "husky",
     "prepublishOnly": "bun run build",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
@@ -46,9 +47,19 @@
     "@opentelemetry/resources": "2.6.0"
   },
   "devDependencies": {
+    "@commitlint/cli": "latest",
+    "@commitlint/config-conventional": "latest",
     "@opencode-ai/plugin": "latest",
+    "@semantic-release/changelog": "latest",
+    "@semantic-release/git": "latest",
     "@types/bun": "latest",
+    "conventional-changelog-conventionalcommits": "latest",
+    "husky": "latest",
+    "semantic-release": "latest",
     "typescript": "latest"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "commitlint": {
+    "extends": ["@commitlint/config-conventional"]
+  }
 }
