@@ -1,3 +1,9 @@
+## [0.6.1](https://github.com/felixti/opencode-otel-plugin/compare/v0.6.0...v0.6.1) (2026-03-22)
+
+### Bug Fixes
+
+* **hooks:** decouple VCS metric recording from tool span lifecycle ([af25b79](https://github.com/felixti/opencode-otel-plugin/commit/af25b797a7fd53bfe313bf4b59e13127801a8e66))
+
 ## [0.6.0](https://github.com/felixti/opencode-otel-plugin/compare/v0.5.1...v0.6.0) (2026-03-22)
 
 ### Features
