@@ -135,7 +135,7 @@ Each OpenCode session produces a trace tree with parent-child relationships:
 |---|---|---|
 | `invoke_agent opencode` | Session start | `gen_ai.agent.name`, `gen_ai.conversation.id` |
 | `chat {model}` | LLM request | `gen_ai.request.model`, `gen_ai.provider.name`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens` |
-| `execute_tool {name}` | Tool call | `gen_ai.tool.name`, `gen_ai.tool.call.id`, `code.language` (edit tool) |
+| `execute_tool {name}` | Tool call | `gen_ai.tool.name`, `gen_ai.tool.call.id`, `code.language` (edit/write tools) |
 | `session_compaction` | Context compaction | `gen_ai.conversation.id` |
 
 ### Metrics
@@ -209,7 +209,7 @@ This plugin follows [OpenTelemetry GenAI Semantic Conventions](https://opentelem
 git clone https://github.com/felixti/opencode-otel-plugin.git
 cd opencode-otel-plugin
 bun install
-bun test             # 32 tests, 68 assertions
+bun test             # 48 tests, 84 assertions
 bun run typecheck    # tsc --noEmit
 bun run build        # dist/index.js + dist/index.d.ts
 ```

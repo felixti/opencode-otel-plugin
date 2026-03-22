@@ -27,9 +27,14 @@ Three exported functions called directly from `src/index.ts`:
 
 Handles `chat.params` hook. Starts a `chat {model}` span as child of the session root, stores `ChatRequestInfo` for later use when the message response arrives, increments `opencode.session.request.count`.
 
-### `tool-execute.ts` — Tool Execute Hooks (137 lines)
+### `tool-execute.ts` — Tool Execute Hooks (189 lines)
 
-Handles `tool.execute.before` and `tool.execute.after`. Before: starts `execute_tool {toolName}` span, records `opencode.tool.invocations`. After: sets output attributes (title, metadata), ends span. For edit tool calls, detects `code.language` from the output metadata file path via `detectLanguage()`. Uses recursive `setMetadataAttributes()` to flatten nested metadata objects into dotted span attribute keys.
+Handles `tool.execute.before` and `tool.execute.after`. Before: starts `execute_tool {toolName}` span, records `opencode.tool.invocations`. After: sets output attributes (title, metadata), ends span. For edit and write tool calls, detects `code.language` from the output metadata file path via `resolveFilepath()` + `detectLanguage()`, and records `opencode.file.changes` metric with additions/deletions via `recordFileChanges()`. Uses recursive `setMetadataAttributes()` to flatten nested metadata objects into dotted span attribute keys.
+
+Helper functions:
+- `setMetadataAttributes()` — recursively flattens metadata objects into span attributes (depth ≤ 3, max 32 keys)
+- `resolveFilepath()` — extracts file path from metadata checking `path`, `file`, and `filediff.file`
+- `recordFileChanges()` — records `opencode.file.changes` metric; handles TS backend shape (`filediff.additions/deletions`) and Go backend shape (`additions/removals`) for edit tools, and top-level `additions/removals` for write tools
 
 ### `index.ts` — Barrel Export (4 lines)
 

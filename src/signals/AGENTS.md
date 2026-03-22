@@ -19,6 +19,8 @@ Defines `MetricInstruments` interface and `createMetricInstruments(meter)` facto
 
 The first two follow GenAI semantic conventions; the last four are custom OpenCode metrics.
 
+**Active usage**: All 6 instruments are actively recorded. `fileChanges` is recorded in `hooks/tool-execute.ts` for `edit` and `write` tool completions (additions/deletions from tool output metadata).
+
 ### `spans.ts` — Span Helpers (70 lines)
 
 Four span creation functions, each returns a `Span`:

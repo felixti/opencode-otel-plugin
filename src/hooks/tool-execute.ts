@@ -67,6 +67,58 @@ function setMetadataAttributes(
   }
 }
 
+/** Extract file path from tool metadata, checking common locations. */
+function resolveFilepath(meta: Record<string, unknown>): string | undefined {
+  if (typeof meta.path === "string") return meta.path
+  if (typeof meta.file === "string") return meta.file
+  const filediff = meta.filediff
+  if (filediff && typeof filediff === "object") {
+    const fd = filediff as Record<string, unknown>
+    if (typeof fd.file === "string") return fd.file
+  }
+  return undefined
+}
+
+/** Record file change metrics from edit/write tool metadata. */
+function recordFileChanges(
+  instruments: MetricInstruments,
+  tool: string,
+  meta: Record<string, unknown>,
+): void {
+  let additions = 0
+  let deletions = 0
+
+  if (tool === "edit") {
+    const filediff = meta.filediff
+    if (filediff && typeof filediff === "object") {
+      const fd = filediff as Record<string, unknown>
+      if (typeof fd.additions === "number") additions = fd.additions
+      if (typeof fd.deletions === "number") deletions = fd.deletions
+    }
+    if (additions === 0 && deletions === 0) {
+      if (typeof meta.additions === "number") additions = meta.additions
+      if (typeof meta.removals === "number") deletions = meta.removals
+    }
+  } else if (tool === "write") {
+    if (typeof meta.additions === "number") additions = meta.additions
+    if (typeof meta.removals === "number") deletions = meta.removals
+  }
+
+  if (additions === 0 && deletions === 0) return
+
+  const filepath = resolveFilepath(meta)
+  const language = filepath ? truncate(detectLanguage(filepath)) : undefined
+  const attrs: Record<string, string> = {}
+  if (language && language !== "unknown") attrs["code.language"] = language
+
+  if (additions > 0) {
+    instruments.fileChanges.add(additions, { ...attrs, "opencode.change.type": "added" })
+  }
+  if (deletions > 0) {
+    instruments.fileChanges.add(deletions, { ...attrs, "opencode.change.type": "removed" })
+  }
+}
+
 export function createToolExecuteHooks(deps: ToolExecuteHookDeps) {
   const { tracer, instruments, state } = deps
 
@@ -106,8 +158,8 @@ export function createToolExecuteHooks(deps: ToolExecuteHookDeps) {
     if (entry) {
       entry.span.setAttribute("gen_ai.tool.output.title", truncate(output.title))
       if (output.metadata && typeof output.metadata === "object") {
-        const keyCount = { count: 0 }
         const meta = output.metadata as Record<string, unknown>
+        const keyCount = { count: 0 }
         for (const key in meta) {
           if (keyCount.count >= 32) break
           if (Object.prototype.hasOwnProperty.call(meta, key)) {
@@ -120,12 +172,12 @@ export function createToolExecuteHooks(deps: ToolExecuteHookDeps) {
             )
           }
         }
-      }
-      if (input.tool === "edit" && output.metadata && typeof output.metadata === "object") {
-        const filepath = (output.metadata as Record<string, unknown>).path
-          ?? (output.metadata as Record<string, unknown>).file
-        if (typeof filepath === "string") {
-          entry.span.setAttribute("code.language", truncate(detectLanguage(filepath)))
+        if (input.tool === "edit" || input.tool === "write") {
+          const filepath = resolveFilepath(meta)
+          if (filepath) {
+            entry.span.setAttribute("code.language", truncate(detectLanguage(filepath)))
+          }
+          recordFileChanges(instruments, input.tool, meta)
         }
       }
       entry.span.end()
