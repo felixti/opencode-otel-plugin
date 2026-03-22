@@ -41,8 +41,7 @@ src/
 ```
 invoke_agent opencode           (root, per session)
 ├── chat {model}                (child, per LLM request)
-├── execute_tool {tool_name}    (child, per tool call)
-├── file_edit {filepath}        (child, per file change from session.diff)
+├── execute_tool {tool_name}    (child, per tool call; edit tool includes code.language)
 └── session_compaction          (child, per compaction)
 ```
 

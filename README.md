@@ -55,9 +55,8 @@ Open [http://localhost:16686](http://localhost:16686), select **opencode** from 
 ```
 invoke_agent opencode                    ← root span (session)
 ├── chat claude-sonnet-4-20250514            ← LLM request
-├── execute_tool file_edit               ← tool call
+├── execute_tool edit                    ← tool call (includes code.language)
 ├── execute_tool bash                    ← tool call
-├── file_edit src/index.ts               ← file change
 └── session_compaction                   ← context compaction
 ```
 
@@ -136,8 +135,7 @@ Each OpenCode session produces a trace tree with parent-child relationships:
 |---|---|---|
 | `invoke_agent opencode` | Session start | `gen_ai.agent.name`, `gen_ai.conversation.id` |
 | `chat {model}` | LLM request | `gen_ai.request.model`, `gen_ai.provider.name`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens` |
-| `execute_tool {name}` | Tool call | `gen_ai.tool.name`, `gen_ai.tool.call.id` |
-| `file_edit {path}` | File change | `code.filepath`, `code.language`, `opencode.file.lines_added`, `opencode.file.lines_removed` |
+| `execute_tool {name}` | Tool call | `gen_ai.tool.name`, `gen_ai.tool.call.id`, `code.language` (edit tool) |
 | `session_compaction` | Context compaction | `gen_ai.conversation.id` |
 
 ### Metrics
