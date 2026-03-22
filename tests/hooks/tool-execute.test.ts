@@ -354,6 +354,18 @@ describe("VCS operations metric", () => {
     await runToolHook("edit", { path: "/src/app.ts" })
     expect(vcsOperationsSpy.calls).toHaveLength(0)
   })
+
+  test("records metric even when tool span entry is missing", async () => {
+    const hooks = createToolExecuteHooks({ tracer, instruments, state })
+    // Call after without prior before — simulates session.idle deleting the entry
+    await hooks.after(
+      { tool: "bash", sessionID: "sess_1", callID: "call_gone", args: { command: "git commit -m \"fix\"" } },
+      { title: "Ran command", output: "ok", metadata: null },
+    )
+    expect(vcsOperationsSpy.calls).toEqual([
+      { value: 1, attributes: { "opencode.vcs.operation": "commit", "opencode.vcs.source": "cli" } },
+    ])
+  })
 })
 
 describe("span chaining", () => {

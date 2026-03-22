@@ -246,17 +246,17 @@ export function createToolExecuteHooks(deps: ToolExecuteHookDeps) {
         }
       }
       entry.span.end()
-
-      // Record VCS metric after span ends — counts completed operations only
-      const vcsResult = classifyVcsOperation(input.tool, input.args)
-      if (vcsResult) {
-        instruments.vcsOperations.add(1, {
-          "opencode.vcs.operation": vcsResult.operation,
-          "opencode.vcs.source": vcsResult.source,
-        })
-      }
-
       state.toolSpans.delete(input.callID)
+    }
+
+    // VCS metric is independent of span lifecycle — record even if entry was
+    // already cleaned up by session.idle or the before hook never ran.
+    const vcsResult = classifyVcsOperation(input.tool, input.args)
+    if (vcsResult) {
+      instruments.vcsOperations.add(1, {
+        "opencode.vcs.operation": vcsResult.operation,
+        "opencode.vcs.source": vcsResult.source,
+      })
     }
   }
 
