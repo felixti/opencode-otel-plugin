@@ -71,20 +71,64 @@ function setMetadataAttributes(
 function resolveFilepath(meta: Record<string, unknown>): string | undefined {
   if (typeof meta.path === "string") return meta.path
   if (typeof meta.file === "string") return meta.file
+  if (typeof meta.filepath === "string") return meta.filepath
   const filediff = meta.filediff
   if (filediff && typeof filediff === "object") {
     const fd = filediff as Record<string, unknown>
     if (typeof fd.file === "string") return fd.file
   }
+  const files = meta.files
+  if (Array.isArray(files) && files.length > 0) {
+    const first = files[0]
+    if (first && typeof first === "object") {
+      const f = first as Record<string, unknown>
+      if (typeof f.filePath === "string") return f.filePath
+    }
+  }
   return undefined
 }
 
-/** Record file change metrics from edit/write tool metadata. */
+/** Count lines in a string by counting newline characters. */
+function countLines(content: string): number {
+  if (content.length === 0) return 0
+  let count = 0
+  for (let i = 0; i < content.length; i++) {
+    if (content.charCodeAt(i) === 10) count++
+  }
+  // If content doesn't end with a newline, the last line still counts
+  if (content.charCodeAt(content.length - 1) !== 10) count++
+  return count
+}
+
+/** Record file change metrics from edit/write/apply_patch tool metadata. */
 function recordFileChanges(
   instruments: MetricInstruments,
   tool: string,
   meta: Record<string, unknown>,
+  args?: unknown,
 ): void {
+  if (tool === "apply_patch") {
+    const files = meta.files
+    if (!Array.isArray(files)) return
+    for (const file of files) {
+      if (!file || typeof file !== "object") continue
+      const f = file as Record<string, unknown>
+      const filePath = typeof f.filePath === "string" ? f.filePath : undefined
+      const language = filePath ? truncate(detectLanguage(filePath)) : undefined
+      const attrs: Record<string, string> = {}
+      if (language && language !== "unknown") attrs["code.language"] = language
+      const add = typeof f.additions === "number" ? f.additions : 0
+      const del = typeof f.deletions === "number" ? f.deletions : 0
+      if (add > 0) {
+        instruments.fileChanges.add(add, { ...attrs, "opencode.change.type": "added" })
+      }
+      if (del > 0) {
+        instruments.fileChanges.add(del, { ...attrs, "opencode.change.type": "removed" })
+      }
+    }
+    return
+  }
+
   let additions = 0
   let deletions = 0
 
@@ -102,6 +146,13 @@ function recordFileChanges(
   } else if (tool === "write") {
     if (typeof meta.additions === "number") additions = meta.additions
     if (typeof meta.removals === "number") deletions = meta.removals
+    // Write tool metadata may lack additions/removals — compute from args.content
+    if (additions === 0 && deletions === 0 && args && typeof args === "object") {
+      const a = args as Record<string, unknown>
+      if (typeof a.content === "string" && a.content.length > 0) {
+        additions = countLines(a.content)
+      }
+    }
   }
 
   if (additions === 0 && deletions === 0) return
@@ -151,7 +202,7 @@ export function createToolExecuteHooks(deps: ToolExecuteHookDeps) {
   }
 
   const after = async (
-    input: { tool: string; sessionID: string; callID: string },
+    input: { tool: string; sessionID: string; callID: string; args?: unknown },
     output: { title: string; output: string; metadata: unknown },
   ) => {
     const entry = state.toolSpans.get(input.callID)
@@ -172,12 +223,12 @@ export function createToolExecuteHooks(deps: ToolExecuteHookDeps) {
             )
           }
         }
-        if (input.tool === "edit" || input.tool === "write") {
+        if (input.tool === "edit" || input.tool === "write" || input.tool === "apply_patch") {
           const filepath = resolveFilepath(meta)
           if (filepath) {
             entry.span.setAttribute("code.language", truncate(detectLanguage(filepath)))
           }
-          recordFileChanges(instruments, input.tool, meta)
+          recordFileChanges(instruments, input.tool, meta, input.args)
         }
       }
       entry.span.end()

@@ -71,11 +71,12 @@ async function runToolHook(
   metadata: unknown,
   callID = "call_1",
   sessionID = "sess_1",
+  args: Record<string, unknown> = {},
 ) {
   const hooks = createToolExecuteHooks({ tracer, instruments, state })
-  await hooks.before({ tool, sessionID, callID }, { args: {} })
+  await hooks.before({ tool, sessionID, callID }, { args })
   await hooks.after(
-    { tool, sessionID, callID },
+    { tool, sessionID, callID, args },
     { title: `Edited file`, output: "ok", metadata },
   )
   return exporter.getFinishedSpans()
@@ -102,6 +103,25 @@ describe("code.language attribute", () => {
   test("sets for write tool", async () => {
     const spans = await runToolHook("write", { path: "/docs/readme.md" })
     expect(spans[0].attributes["code.language"]).toBe("markdown")
+  })
+
+  test("sets from metadata.filepath for write tool (real OpenCode shape)", async () => {
+    const spans = await runToolHook("write", {
+      filepath: "/src/utils/helper.ts",
+      exists: true,
+      diagnostics: {},
+    })
+    expect(spans[0].attributes["code.language"]).toBe("typescript")
+  })
+
+  test("sets for apply_patch tool from files[0].filePath", async () => {
+    const spans = await runToolHook("apply_patch", {
+      files: [
+        { filePath: "/src/index.rs", additions: 3, deletions: 1, diff: "...", type: "update" },
+      ],
+      diagnostics: {},
+    })
+    expect(spans[0].attributes["code.language"]).toBe("rust")
   })
 
   test("not set for non-edit/write tools", async () => {
@@ -188,6 +208,64 @@ describe("file changes metric", () => {
     expect(fileChangesSpy.calls).toEqual([
       { value: 8, attributes: { "code.language": "typescript", "opencode.change.type": "removed" } },
     ])
+  })
+
+  test("records from apply_patch per-file additions and deletions", async () => {
+    await runToolHook("apply_patch", {
+      files: [
+        { filePath: "/src/a.ts", additions: 5, deletions: 2, diff: "...", type: "update" },
+        { filePath: "/src/b.py", additions: 3, deletions: 0, diff: "...", type: "add" },
+      ],
+      diagnostics: {},
+    })
+    expect(fileChangesSpy.calls).toEqual([
+      { value: 5, attributes: { "code.language": "typescript", "opencode.change.type": "added" } },
+      { value: 2, attributes: { "code.language": "typescript", "opencode.change.type": "removed" } },
+      { value: 3, attributes: { "code.language": "python", "opencode.change.type": "added" } },
+    ])
+  })
+
+  test("records from apply_patch single file delete", async () => {
+    await runToolHook("apply_patch", {
+      files: [
+        { filePath: "/src/old.go", additions: 0, deletions: 40, diff: "...", type: "delete" },
+      ],
+      diagnostics: {},
+    })
+    expect(fileChangesSpy.calls).toEqual([
+      { value: 40, attributes: { "code.language": "go", "opencode.change.type": "removed" } },
+    ])
+  })
+
+  test("records from write tool using args.content when metadata lacks counts", async () => {
+    await runToolHook(
+      "write",
+      { filepath: "/src/new.ts", exists: false, diagnostics: {} },
+      "call_1",
+      "sess_1",
+      { content: "line1\nline2\nline3\n", filePath: "/src/new.ts" },
+    )
+    expect(fileChangesSpy.calls).toEqual([
+      { value: 3, attributes: { "code.language": "typescript", "opencode.change.type": "added" } },
+    ])
+  })
+
+  test("records from write tool using args.content without trailing newline", async () => {
+    await runToolHook(
+      "write",
+      { filepath: "/src/app.jsx", exists: true, diagnostics: {} },
+      "call_1",
+      "sess_1",
+      { content: "line1\nline2", filePath: "/src/app.jsx" },
+    )
+    expect(fileChangesSpy.calls).toEqual([
+      { value: 2, attributes: { "code.language": "javascript", "opencode.change.type": "added" } },
+    ])
+  })
+
+  test("not recorded for apply_patch when files array is empty", async () => {
+    await runToolHook("apply_patch", { files: [], diagnostics: {} })
+    expect(fileChangesSpy.calls).toHaveLength(0)
   })
 })
 
