@@ -190,6 +190,8 @@ Created on `tool.execute.before`, ended on `tool.execute.after`. Includes flatte
 | `gen_ai.tool.output.title` | string | Tool output title (set on completion) |
 | `gen_ai.tool.output.metadata.*` | string | Flattened tool output metadata (max 32 keys, depth 3, strings truncated to 256 chars) |
 | `code.language` | string | Detected programming language (edit, write, and apply_patch tools only; derived from file extension) |
+| `opencode.file.additions` | number | Lines added (edit, write, and apply_patch tools only; omitted when zero) |
+| `opencode.file.deletions` | number | Lines removed (edit, write, and apply_patch tools only; omitted when zero) |
 
 #### `session_compaction` — Context Compaction Span
 
@@ -317,7 +319,7 @@ This plugin follows [OpenTelemetry GenAI Semantic Conventions](https://opentelem
 git clone https://github.com/felixti/opencode-otel-plugin.git
 cd opencode-otel-plugin
 bun install
-bun test             # 62 tests, 103 assertions
+bun test             # 67 tests, 113 assertions
 bun run typecheck    # tsc --noEmit
 bun run build        # dist/index.js + dist/index.d.ts
 ```
