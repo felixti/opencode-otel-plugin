@@ -100,7 +100,7 @@ Returns the **first match** — a command like `git commit && gh pr create` retu
 | `pull_request_review` | `pr_review` | — |
 | `update_pull_request` | `pr_edit` | Must not contain `branch` |
 
-Order matters — check `merge_pull_request` and `pull_request_review` before generic `pull_request` patterns.
+Check `merge_pull_request` before `create_pull_request` (substring overlap), and `update_pull_request_branch` guard before `update_pull_request`.
 
 ## Integration Point
 
@@ -153,7 +153,7 @@ export { classifyVcsOperation, type VcsOperation, type VcsDetectionResult } from
 | `src/utils/vcs-detect.ts` | **New** — detection function + types | ~80 |
 | `src/utils/index.ts` | Add re-export | ~1 |
 | `src/signals/metrics.ts` | Add `vcsOperations` to interface + factory | ~5 |
-| `src/hooks/tool-execute.ts` | Import + call classify + record metric | ~5 |
+| `src/hooks/tool-execute.ts` | Import + call classify + record metric | ~5 (file already 253 lines; detection logic stays in vcs-detect.ts per Approach B) |
 | `tests/utils/vcs-detect.test.ts` | **New** — unit tests for detection | ~120 |
 | `tests/hooks/tool-execute.test.ts` | Add VCS metric integration tests | ~30 |
 
@@ -166,8 +166,9 @@ No changes to `PluginState`, `types.ts`, or shutdown logic — this is purely ad
 **Git commit detection:**
 - `git commit -m "msg"` returns `{ operation: "commit", source: "cli" }`
 - `git commit --amend` returns `{ operation: "commit", source: "cli" }`
-- `git add . && git commit -m "msg"` returns `{ operation: "commit", source: "cli" }`
+- `git add . && git commit -m "msg"` returns `{ operation: "commit", source: "cli" }` (chained — first VCS match wins)
 - `GIT_AUTHOR_NAME=x git commit -m "msg"` returns `{ operation: "commit", source: "cli" }`
+- `git commit -m "msg" && gh pr create` returns `{ operation: "commit", source: "cli" }` (first match wins)
 
 **PR CLI detection:**
 - `gh pr create --title "t"` returns `{ operation: "pr_create", source: "cli" }`
