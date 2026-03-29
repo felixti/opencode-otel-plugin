@@ -22,6 +22,13 @@ const noopAsync = () => RESOLVED
 const SWEEP_INTERVAL_MS = 60_000
 const SWEEP_TTL_MS = 5 * 60_000
 
+/** Parse OTEL_OPENCODE_FILTERED_TOOLS env var into a Set of tool names. */
+export function parseFilteredTools(): Set<string> {
+  const env = process.env.OTEL_OPENCODE_FILTERED_TOOLS
+  if (!env) return new Set() // Empty = no filtering
+  return new Set(env.split(",").map((t) => t.trim()).filter(Boolean))
+}
+
 export const OpenCodeOtelPlugin: Plugin = async ({ project, $, directory, worktree }) => {
   let tracer: ReturnType<typeof trace.getTracer>
   let meter: ReturnType<typeof metrics.getMeter>
@@ -57,7 +64,7 @@ export const OpenCodeOtelPlugin: Plugin = async ({ project, $, directory, worktr
       gitAuthor: undefined,
       repoUrl: undefined,
       gitReady: RESOLVED,
-      filteredTools: new Set(),
+      filteredTools: parseFilteredTools(),
     }
 
     state.gitReady = Promise.all([
