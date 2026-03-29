@@ -57,6 +57,7 @@ export const OpenCodeOtelPlugin: Plugin = async ({ project, $, directory, worktr
       gitAuthor: undefined,
       repoUrl: undefined,
       gitReady: RESOLVED,
+      filteredTools: new Set(),
     }
 
     state.gitReady = Promise.all([

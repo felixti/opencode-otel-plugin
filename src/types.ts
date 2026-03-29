@@ -40,4 +40,5 @@ export interface PluginState {
   sweepInterval?: ReturnType<typeof setInterval>
   lastFlushTime?: number
   gitReady: Promise<void>
+  filteredTools: Set<string> // Tools to exclude from span generation
 }

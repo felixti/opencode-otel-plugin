@@ -47,6 +47,7 @@ function createMockState(): PluginState {
     gitAuthor: undefined,
     repoUrl: undefined,
     gitReady: Promise.resolve(),
+    filteredTools: new Set(),
   }
 }
 
