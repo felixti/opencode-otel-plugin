@@ -185,6 +185,14 @@ export function createToolExecuteHooks(deps: ToolExecuteHookDeps) {
     input: { tool: string; sessionID: string; callID: string },
     _output: { args: any },
   ) => {
+    // Filtered tools skip span creation but still record metrics
+    if (state.filteredTools.has(input.tool)) {
+      instruments.toolInvocations.add(1, {
+        "gen_ai.tool.name": truncate(input.tool),
+      })
+      return
+    }
+
     await state.gitReady
     const session = state.sessionSpans.get(input.sessionID)
     if (session) session.lastActivityAt = Date.now()
