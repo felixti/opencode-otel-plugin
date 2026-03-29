@@ -314,6 +314,8 @@ Counter tracking git commits and PR mutations performed during sessions. Unit: `
 |---|---|---|
 | `opencode.vcs.operation` | string | Operation type: `"commit"`, `"pr_create"`, `"pr_merge"`, `"pr_close"`, `"pr_reopen"`, `"pr_review"`, or `"pr_edit"` |
 | `opencode.vcs.source` | string | Detection source: `"cli"` (bash commands) or `"mcp"` (MCP tool names) |
+| `vcs.repository.url.full` | string | Git remote URL |
+| `vcs.repository.ref.name` | string | Current git branch |
 
 ### Resource Attributes
 

@@ -323,40 +323,116 @@ describe("file change span attributes", () => {
 })
 
 describe("VCS operations metric", () => {
-  test("records git commit from bash tool", async () => {
+  test("records git commit from bash tool with repo attributes", async () => {
+    state.repoUrl = "https://github.com/test/repo"
+    state.currentBranch = "main"
     await runToolHook("bash", null, "call_1", "sess_1", { command: "git commit -m \"feat: add feature\"" })
+    expect(vcsOperationsSpy.calls).toEqual([
+      {
+        value: 1,
+        attributes: {
+          "opencode.vcs.operation": "commit",
+          "opencode.vcs.source": "cli",
+          "vcs.repository.url.full": "https://github.com/test/repo",
+          "vcs.repository.ref.name": "main",
+        },
+      },
+    ])
+  })
+
+  test("records gh pr create from bash tool with repo attributes", async () => {
+    state.repoUrl = "https://github.com/test/repo"
+    state.currentBranch = "feature-branch"
+    await runToolHook("bash", null, "call_1", "sess_1", { command: "gh pr create --title \"fix\"" })
+    expect(vcsOperationsSpy.calls).toEqual([
+      {
+        value: 1,
+        attributes: {
+          "opencode.vcs.operation": "pr_create",
+          "opencode.vcs.source": "cli",
+          "vcs.repository.url.full": "https://github.com/test/repo",
+          "vcs.repository.ref.name": "feature-branch",
+        },
+      },
+    ])
+  })
+
+  test("records MCP create_pull_request tool with repo attributes", async () => {
+    state.repoUrl = "https://github.com/org/repo"
+    state.currentBranch = "main"
+    await runToolHook("mcp__github__create_pull_request", null, "call_1", "sess_1", {
+      owner: "org", repo: "repo", title: "PR", head: "feat", base: "main",
+    })
+    expect(vcsOperationsSpy.calls).toEqual([
+      {
+        value: 1,
+        attributes: {
+          "opencode.vcs.operation": "pr_create",
+          "opencode.vcs.source": "mcp",
+          "vcs.repository.url.full": "https://github.com/org/repo",
+          "vcs.repository.ref.name": "main",
+        },
+      },
+    ])
+  })
+
+  test("omits repo attributes when state has no repoUrl or currentBranch", async () => {
+    // state.repoUrl and state.currentBranch are undefined by default in createMockState()
+    await runToolHook("bash", null, "call_1", "sess_1", { command: "git commit -m \"fix\"" })
     expect(vcsOperationsSpy.calls).toEqual([
       { value: 1, attributes: { "opencode.vcs.operation": "commit", "opencode.vcs.source": "cli" } },
     ])
   })
 
-  test("records gh pr create from bash tool", async () => {
-    await runToolHook("bash", null, "call_1", "sess_1", { command: "gh pr create --title \"fix\"" })
+  test("includes only repoUrl when currentBranch is undefined", async () => {
+    state.repoUrl = "https://github.com/test/repo"
+    // state.currentBranch is undefined
+    await runToolHook("bash", null, "call_1", "sess_1", { command: "git commit -m \"fix\"" })
     expect(vcsOperationsSpy.calls).toEqual([
-      { value: 1, attributes: { "opencode.vcs.operation": "pr_create", "opencode.vcs.source": "cli" } },
+      {
+        value: 1,
+        attributes: {
+          "opencode.vcs.operation": "commit",
+          "opencode.vcs.source": "cli",
+          "vcs.repository.url.full": "https://github.com/test/repo",
+        },
+      },
     ])
   })
 
-  test("records MCP create_pull_request tool", async () => {
-    await runToolHook("mcp__github__create_pull_request", null, "call_1", "sess_1", {
-      owner: "org", repo: "repo", title: "PR", head: "feat", base: "main",
-    })
+  test("includes only currentBranch when repoUrl is undefined", async () => {
+    // state.repoUrl is undefined
+    state.currentBranch = "develop"
+    await runToolHook("bash", null, "call_1", "sess_1", { command: "git commit -m \"fix\"" })
     expect(vcsOperationsSpy.calls).toEqual([
-      { value: 1, attributes: { "opencode.vcs.operation": "pr_create", "opencode.vcs.source": "mcp" } },
+      {
+        value: 1,
+        attributes: {
+          "opencode.vcs.operation": "commit",
+          "opencode.vcs.source": "cli",
+          "vcs.repository.ref.name": "develop",
+        },
+      },
     ])
   })
 
   test("does not record for non-VCS bash tool", async () => {
+    state.repoUrl = "https://github.com/test/repo"
+    state.currentBranch = "main"
     await runToolHook("bash", null, "call_1", "sess_1", { command: "ls -la" })
     expect(vcsOperationsSpy.calls).toHaveLength(0)
   })
 
   test("does not record for edit tool", async () => {
+    state.repoUrl = "https://github.com/test/repo"
+    state.currentBranch = "main"
     await runToolHook("edit", { path: "/src/app.ts" })
     expect(vcsOperationsSpy.calls).toHaveLength(0)
   })
 
   test("records metric even when tool span entry is missing", async () => {
+    state.repoUrl = "https://github.com/test/repo"
+    state.currentBranch = "main"
     const hooks = createToolExecuteHooks({ tracer, instruments, state })
     // Call after without prior before — simulates session.idle deleting the entry
     await hooks.after(
@@ -364,7 +440,15 @@ describe("VCS operations metric", () => {
       { title: "Ran command", output: "ok", metadata: null },
     )
     expect(vcsOperationsSpy.calls).toEqual([
-      { value: 1, attributes: { "opencode.vcs.operation": "commit", "opencode.vcs.source": "cli" } },
+      {
+        value: 1,
+        attributes: {
+          "opencode.vcs.operation": "commit",
+          "opencode.vcs.source": "cli",
+          "vcs.repository.url.full": "https://github.com/test/repo",
+          "vcs.repository.ref.name": "main",
+        },
+      },
     ])
   })
 })

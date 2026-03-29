@@ -261,10 +261,17 @@ export function createToolExecuteHooks(deps: ToolExecuteHookDeps) {
     // already cleaned up by session.idle or the before hook never ran.
     const vcsResult = classifyVcsOperation(input.tool, input.args)
     if (vcsResult) {
-      instruments.vcsOperations.add(1, {
+      const attrs: Record<string, string> = {
         "opencode.vcs.operation": vcsResult.operation,
         "opencode.vcs.source": vcsResult.source,
-      })
+      }
+      if (state.repoUrl) {
+        attrs["vcs.repository.url.full"] = truncate(state.repoUrl)
+      }
+      if (state.currentBranch) {
+        attrs["vcs.repository.ref.name"] = truncate(state.currentBranch)
+      }
+      instruments.vcsOperations.add(1, attrs)
     }
   }
 
