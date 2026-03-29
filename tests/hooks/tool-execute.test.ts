@@ -441,3 +441,58 @@ describe("span chaining", () => {
     expect(bashSpan.spanContext().traceId).toBe(sessionTraceId)
   })
 })
+
+describe("tool span filtering", () => {
+  test("Filtered tool → no span created", async () => {
+    state.filteredTools = new Set(["read", "glob"])
+    const hooks = createToolExecuteHooks({ tracer, instruments, state })
+    const callID = "call_filtered"
+    await hooks.before({ tool: "read", sessionID: "sess_1", callID }, { args: {} })
+    expect(state.toolSpans.has(callID)).toBe(false)
+    const spans = exporter.getFinishedSpans()
+    expect(spans.find((s) => s.name === "execute_tool read")).toBeUndefined()
+  })
+
+  test("Non-filtered tool → span created normally", async () => {
+    state.filteredTools = new Set(["read", "glob"])
+    const hooks = createToolExecuteHooks({ tracer, instruments, state })
+    const callID = "call_allowed"
+    await hooks.before({ tool: "edit", sessionID: "sess_1", callID }, { args: {} })
+    expect(state.toolSpans.has(callID)).toBe(true)
+  })
+
+  test("Filtered tool → metric still recorded", async () => {
+    state.filteredTools = new Set(["read", "glob"])
+    const { toolInvocationsSpy } = createMockInstruments()
+    const filteredInstruments = {
+      tokenUsage: { record() {} },
+      operationDuration: { record() {} },
+      requestCount: { add() {} },
+      compactionCount: { add() {} },
+      fileChanges: { add() {} },
+      toolInvocations: toolInvocationsSpy,
+      vcsOperations: { add() {} },
+    } as unknown as MetricInstruments
+
+    const hooks = createToolExecuteHooks({ tracer, instruments: filteredInstruments, state })
+    const callID = "call_filtered_metric"
+    await hooks.before({ tool: "read", sessionID: "sess_1", callID }, { args: {} })
+    expect(toolInvocationsSpy.calls).toEqual([
+      { value: 1, attributes: { "gen_ai.tool.name": "read" } },
+    ])
+  })
+
+  test("After hook for filtered tool → graceful no-op", async () => {
+    state.filteredTools = new Set(["read", "glob"])
+    const hooks = createToolExecuteHooks({ tracer, instruments, state })
+    const callID = "call_filtered_after"
+    await hooks.before({ tool: "glob", sessionID: "sess_1", callID }, { args: {} })
+    expect(state.toolSpans.has(callID)).toBe(false)
+    await hooks.after(
+      { tool: "glob", sessionID: "sess_1", callID, args: {} },
+      { title: "Found files", output: "ok", metadata: { files: ["/a.ts"] } },
+    )
+    const spans = exporter.getFinishedSpans()
+    expect(spans.find((s) => s.name === "execute_tool glob")).toBeUndefined()
+  })
+})
