@@ -69,6 +69,51 @@ All configuration uses standard [OpenTelemetry environment variables](https://op
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP/HTTP base URL | `http://localhost:4318` |
 | `OTEL_EXPORTER_OTLP_HEADERS` | Auth headers (`key=value`, comma-separated) | — |
 | `OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE` | Metric temporality (`cumulative`, `delta`, `lowmemory`) | `cumulative` |
+| `OTEL_OPENCODE_FILTERED_TOOLS` | Comma-separated list of tool names to exclude from span generation (see [Tool Span Filtering](#tool-span-filtering)) | — (no filtering) |
+
+### Tool Span Filtering
+
+By default, the plugin creates a span for every tool execution (`read`, `glob`, `grep`, `edit`, `bash`, etc.). In busy sessions, this can generate hundreds of low-value spans that clutter your traces.
+
+Use `OTEL_OPENCODE_FILTERED_TOOLS` to exclude specific tool types from span generation while preserving metrics:
+
+```bash
+# Filter out noisy tools (read, glob, grep) — reduces trace volume by ~70%
+export OTEL_OPENCODE_FILTERED_TOOLS="read,glob,grep"
+
+# Filter a single tool
+export OTEL_OPENCODE_FILTERED_TOOLS="read"
+
+# Filter multiple tools with whitespace (trimmed automatically)
+export OTEL_OPENCODE_FILTERED_TOOLS="read, glob, grep, bash"
+
+# Disable filtering (default behavior)
+unset OTEL_OPENCODE_FILTERED_TOOLS
+```
+
+**Behavior:**
+- Filtered tools: **No span created**, but `opencode.tool.invocations` metric is still recorded
+- Non-filtered tools: Span created + metric recorded (unchanged behavior)
+- Critical spans (`edit`, `write`, `git-commit`, `chat`) are never filtered
+- Case-sensitive matching (`read` ≠ `Read`)
+
+**Example trace tree with filtering:**
+
+```
+# Without filtering: 50+ execute_tool spans per session
+invoke_agent opencode
+├── chat claude-sonnet-4-20250514
+├── execute_tool read          ← 50+ of these
+├── execute_tool glob          ← 20+ of these
+├── execute_tool edit          ← high-signal
+└── execute_tool git-commit    ← high-signal
+
+# With OTEL_OPENCODE_FILTERED_TOOLS="read,glob,grep":
+invoke_agent opencode
+├── chat claude-sonnet-4-20250514
+├── execute_tool edit          ← high-signal preserved
+└── execute_tool git-commit    ← high-signal preserved
+```
 
 ### Backend Examples
 
@@ -331,7 +376,7 @@ This plugin follows [OpenTelemetry GenAI Semantic Conventions](https://opentelem
 git clone https://github.com/felixti/opencode-otel-plugin.git
 cd opencode-otel-plugin
 bun install
-bun test             # 105 tests, 151 assertions
+bun test             # 116 tests, 180 assertions
 bun run typecheck    # tsc --noEmit
 bun run build        # dist/index.js + dist/index.d.ts
 ```
