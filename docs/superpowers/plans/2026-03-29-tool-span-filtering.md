@@ -167,7 +167,7 @@ Expected: No errors
 - [ ] **Step 3: Run existing tests to ensure no regression**
 
 Run: `bun test`
-Expected: All existing tests pass (105 tests)
+Expected: All existing tests pass (119 tests)
 
 - [ ] **Step 4: Commit**
 

@@ -25,7 +25,7 @@ tests/
 - Use `describe`/`test`/`expect` from `bun:test`
 - OTel tests use real SDK instances (no mocks for `Tracer`/`Meter`) with in-memory exporters where needed
 - `hooks/` tests use their own `BasicTracerProvider` + `InMemorySpanExporter` (isolated from `spans.test.ts`)
-- 105 tests, 151 assertions total
+- 119 tests, 183 assertions total
 
 ## Test Patterns
 

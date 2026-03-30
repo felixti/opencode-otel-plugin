@@ -6,7 +6,7 @@ OpenTelemetry instrumentation plugin for [OpenCode](https://opencode.ai). Emits 
 
 ```bash
 bun install          # Install dependencies
-bun test             # Run all tests (bun:test, 105 tests / 151 assertions)
+bun test             # Run all tests (bun:test, 119 tests / 183 assertions)
 bun run typecheck    # Type-check with tsc --noEmit
 bun run build        # Bundle to dist/ (bun build + tsc --emitDeclarationOnly)
 ```
