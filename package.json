@@ -1,6 +1,6 @@
 {
   "name": "opencode-otel-plugin",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "OpenTelemetry instrumentation plugin for OpenCode — traces and metrics for AI coding sessions via OTLP/HTTP",
   "type": "module",
   "main": "dist/index.js",

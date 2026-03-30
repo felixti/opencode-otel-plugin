@@ -1,3 +1,11 @@
+## [0.8.0](https://github.com/felixti/opencode-otel-plugin/compare/v0.7.0...v0.8.0) (2026-03-30)
+
+### Features
+
+* **plugin:** integrate update checker into plugin initialization ([d58e734](https://github.com/felixti/opencode-otel-plugin/commit/d58e734314bc5e33b8ae55746d8a5fc33ff37a09))
+* **utils:** add update checker module ([2389a05](https://github.com/felixti/opencode-otel-plugin/commit/2389a0534b2534d061d46827f4de91e272f37cb3))
+* **utils:** export update checker from utils index ([f636808](https://github.com/felixti/opencode-otel-plugin/commit/f6368082bb2d2dc4e6b820ac7be12e5662e1c76f))
+
 ## [0.7.0](https://github.com/felixti/opencode-otel-plugin/compare/v0.6.1...v0.7.0) (2026-03-30)
 
 ### Features
