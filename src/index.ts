@@ -10,7 +10,9 @@ import { createChatParamsHook } from "./hooks/chat-params"
 import { createToolExecuteHooks } from "./hooks/tool-execute"
 import { getGitAuthor, getRepoUrl, getCurrentBranch, getHostname } from "./utils/git"
 import { truncate } from "./utils/truncate"
+import { checkForUpdates } from "./utils/update-checker"
 import type { PluginState } from "./types"
+import pkg from "../package.json" with { type: "json" }
 
 const TRACER_NAME = "opencode-otel-plugin"
 const METER_NAME = "opencode-otel-plugin"
@@ -29,7 +31,7 @@ export function parseFilteredTools(): Set<string> {
   return new Set(env.split(",").map((t) => t.trim()).filter(Boolean))
 }
 
-export const OpenCodeOtelPlugin: Plugin = async ({ project, $, directory, worktree }) => {
+export const OpenCodeOtelPlugin: Plugin = async ({ project, $, directory, worktree, client }) => {
   let tracer: ReturnType<typeof trace.getTracer>
   let meter: ReturnType<typeof metrics.getMeter>
   let instruments: ReturnType<typeof createMetricInstruments>
@@ -119,6 +121,13 @@ export const OpenCodeOtelPlugin: Plugin = async ({ project, $, directory, worktr
       sweepTimer.unref()
     }
     state.sweepInterval = sweepTimer
+
+    checkForUpdates({
+      packageName: pkg.name,
+      currentVersion: pkg.version,
+      pluginName: "OpenTelemetry Plugin",
+      client,
+    })
   } catch {
     return {
       event: noopAsync,
