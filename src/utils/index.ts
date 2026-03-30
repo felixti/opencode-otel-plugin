@@ -1,3 +1,4 @@
+export { checkForUpdates, fetchLatestVersion, isNewerVersion } from "./update-checker"
 export { detectLanguage } from "./language"
 export { getGitAuthor, getRepoUrl, getCurrentBranch, getHostname } from "./git"
 export { truncate } from "./truncate"
