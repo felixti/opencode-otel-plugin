@@ -1,3 +1,12 @@
+## [0.7.0](https://github.com/felixti/opencode-otel-plugin/compare/v0.6.1...v0.7.0) (2026-03-30)
+
+### Features
+
+* **hooks:** skip span creation for filtered tools ([4a31481](https://github.com/felixti/opencode-otel-plugin/commit/4a3148129ec10b1f027a22ac74757275c4b25be1))
+* **metrics:** add vcs repository attributes to vcs operations metric ([a53c1be](https://github.com/felixti/opencode-otel-plugin/commit/a53c1be6e958147548e51e0f2e11ae2a790a203d))
+* parse OTEL_OPENCODE_FILTERED_TOOLS env var ([1f94b50](https://github.com/felixti/opencode-otel-plugin/commit/1f94b50c7a7ba0d0b21998a92eb5db11149fffed))
+* **types:** add filteredTools to PluginState interface ([b90e7fe](https://github.com/felixti/opencode-otel-plugin/commit/b90e7fe13b77fd4f65c87903465340da91b01bee))
+
 ## [0.6.1](https://github.com/felixti/opencode-otel-plugin/compare/v0.6.0...v0.6.1) (2026-03-22)
 
 ### Bug Fixes
