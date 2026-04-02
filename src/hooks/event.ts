@@ -31,6 +31,7 @@ export function createEventHook(deps: EventHookDeps) {
         }
         if (state.gitAuthor) {
           span.setAttribute("enduser.id", truncate(state.gitAuthor))
+          span.setAttribute("host.user.email", truncate(state.gitAuthor))
         }
         if (state.repoUrl) {
           span.setAttribute("vcs.repository.url.full", truncate(state.repoUrl))

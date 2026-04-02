@@ -6,6 +6,7 @@ describe("buildResourceAttributes", () => {
     const attrs = buildResourceAttributes({
       author: "dev@example.com",
       hostname: "macbook-pro",
+      email: "dev@example.com",
       projectName: "my-project",
       repoUrl: "https://github.com/org/repo",
       branch: "main",
@@ -15,6 +16,7 @@ describe("buildResourceAttributes", () => {
 
     expect(attrs["service.name"]).toBe("opencode")
     expect(attrs["host.name"]).toBe("macbook-pro")
+    expect(attrs["host.user.email"]).toBe("dev@example.com")
     expect(attrs["enduser.id"]).toBe("dev@example.com")
     expect(attrs["opencode.project.name"]).toBe("my-project")
     expect(attrs["vcs.repository.url.full"]).toBe("https://github.com/org/repo")
@@ -27,6 +29,7 @@ describe("buildResourceAttributes", () => {
     const attrs = buildResourceAttributes({
       author: "unknown",
       hostname: "unknown",
+      email: "unknown",
       projectName: "",
       repoUrl: "unknown",
       branch: "unknown",
@@ -36,12 +39,14 @@ describe("buildResourceAttributes", () => {
 
     expect(attrs["service.name"]).toBe("opencode")
     expect(attrs["host.name"]).toBe("unknown")
+    expect(attrs["host.user.email"]).toBe("unknown")
   })
 
   test("does not include service.version (set on spans via installation.updated)", () => {
     const attrs = buildResourceAttributes({
       author: "dev@example.com",
       hostname: "macbook-pro",
+      email: "dev@example.com",
       projectName: "my-project",
       repoUrl: "https://github.com/org/repo",
       branch: "main",

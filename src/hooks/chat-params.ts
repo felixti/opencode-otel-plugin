@@ -37,6 +37,7 @@ export function createChatParamsHook(deps: ChatParamsHookDeps) {
     })
 
     if (state.gitAuthor) span.setAttribute("enduser.id", truncate(state.gitAuthor))
+    if (state.gitAuthor) span.setAttribute("host.user.email", truncate(state.gitAuthor))
     if (state.repoUrl) span.setAttribute("vcs.repository.url.full", truncate(state.repoUrl))
 
     instruments.requestCount.add(1, {

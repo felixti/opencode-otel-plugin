@@ -204,6 +204,7 @@ export function createToolExecuteHooks(deps: ToolExecuteHookDeps) {
     }, session?.context)
 
     if (state.gitAuthor) span.setAttribute("enduser.id", truncate(state.gitAuthor))
+    if (state.gitAuthor) span.setAttribute("host.user.email", truncate(state.gitAuthor))
     if (state.repoUrl) span.setAttribute("vcs.repository.url.full", truncate(state.repoUrl))
 
     state.toolSpans.set(input.callID, {

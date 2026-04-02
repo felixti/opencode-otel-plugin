@@ -10,12 +10,14 @@ export interface ResourceInput {
   branch: string
   worktree: string
   directory: string
+  email: string
 }
 
 export function buildResourceAttributes(input: ResourceInput): Record<string, string> {
   return {
     "service.name": truncate("opencode"),
     "host.name": truncate(input.hostname),
+    "host.user.email": truncate(input.email),
     "enduser.id": truncate(input.author),
     "opencode.project.name": truncate(input.projectName),
     "vcs.repository.url.full": truncate(input.repoUrl),

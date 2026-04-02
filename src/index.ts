@@ -45,6 +45,7 @@ export const OpenCodeOtelPlugin: Plugin = async ({ project, $, directory, worktr
     const resource = createResource({
       author: "",
       hostname,
+      email: "",
       projectName: project.id ?? "",
       repoUrl: "",
       branch: "",
@@ -79,11 +80,13 @@ export const OpenCodeOtelPlugin: Plugin = async ({ project, $, directory, worktr
       state.repoUrl = repoUrl || undefined
       for (const session of state.sessionSpans.values()) {
         if (author) session.span.setAttribute("enduser.id", truncate(author))
+        if (author) session.span.setAttribute("host.user.email", truncate(author))
         if (repoUrl) session.span.setAttribute("vcs.repository.url.full", truncate(repoUrl))
         if (branch) session.span.setAttribute("vcs.repository.ref.name", truncate(branch))
       }
       for (const entry of state.toolSpans.values()) {
         if (author) entry.span.setAttribute("enduser.id", truncate(author))
+        if (author) entry.span.setAttribute("host.user.email", truncate(author))
         if (repoUrl) entry.span.setAttribute("vcs.repository.url.full", truncate(repoUrl))
         if (branch) entry.span.setAttribute("vcs.repository.ref.name", truncate(branch))
       }

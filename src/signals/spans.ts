@@ -61,7 +61,7 @@ export function startCompactionSpan(
     attributes: {
       "gen_ai.conversation.id": truncate(sessionID),
       ...(branch ? { "vcs.repository.ref.name": truncate(branch) } : {}),
-      ...(gitAuthor ? { "enduser.id": truncate(gitAuthor) } : {}),
+      ...(gitAuthor ? { "enduser.id": truncate(gitAuthor), "host.user.email": truncate(gitAuthor) } : {}),
       ...(repoUrl ? { "vcs.repository.url.full": truncate(repoUrl) } : {}),
     },
   }, parentContext)
