@@ -50,6 +50,7 @@ export function handleMessageUpdated(
       "gen_ai.provider.name": truncate(chatReq.provider),
       "gen_ai.request.model": truncate(chatReq.model),
       "gen_ai.token.type": truncate("input"),
+      ...(state.gitAuthor ? { "host.user.email": truncate(state.gitAuthor) } : {}),
     })
   }
   if (outputTokens != null) {
@@ -58,6 +59,7 @@ export function handleMessageUpdated(
       "gen_ai.provider.name": truncate(chatReq.provider),
       "gen_ai.request.model": truncate(chatReq.model),
       "gen_ai.token.type": truncate("output"),
+      ...(state.gitAuthor ? { "host.user.email": truncate(state.gitAuthor) } : {}),
     })
   }
   if (errorType) {
@@ -66,12 +68,14 @@ export function handleMessageUpdated(
       "gen_ai.provider.name": truncate(chatReq.provider),
       "gen_ai.request.model": truncate(chatReq.model),
       "error.type": truncate(errorType),
+      ...(state.gitAuthor ? { "host.user.email": truncate(state.gitAuthor) } : {}),
     })
   } else {
     instruments.operationDuration.record(durationS, {
       "gen_ai.operation.name": truncate("chat"),
       "gen_ai.provider.name": truncate(chatReq.provider),
       "gen_ai.request.model": truncate(chatReq.model),
+      ...(state.gitAuthor ? { "host.user.email": truncate(state.gitAuthor) } : {}),
     })
   }
 
@@ -102,6 +106,7 @@ export function handleSessionError(
     "gen_ai.provider.name": truncate(chatReq.provider),
     "gen_ai.request.model": truncate(chatReq.model),
     "error.type": truncate(errorType),
+    ...(state.gitAuthor ? { "host.user.email": truncate(state.gitAuthor) } : {}),
   })
 
   state.pendingChatRequests.delete(sessionID)

@@ -43,6 +43,7 @@ export function createChatParamsHook(deps: ChatParamsHookDeps) {
     instruments.requestCount.add(1, {
       "gen_ai.request.model": truncate(modelID),
       "gen_ai.provider.name": truncate(providerID),
+      ...(state.gitAuthor ? { "host.user.email": truncate(state.gitAuthor) } : {}),
     })
 
     if (session) {

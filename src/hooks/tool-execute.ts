@@ -112,8 +112,10 @@ function recordFileChanges(
   tool: string,
   meta: Record<string, unknown>,
   args?: unknown,
+  gitAuthor?: string,
 ): FileChangeTotals {
   const totals: FileChangeTotals = { additions: 0, deletions: 0 }
+  const emailAttrs = gitAuthor ? { "host.user.email": truncate(gitAuthor) } : {}
 
   if (tool === "apply_patch") {
     const files = meta.files
@@ -130,10 +132,10 @@ function recordFileChanges(
       totals.additions += add
       totals.deletions += del
       if (add > 0) {
-        instruments.fileChanges.add(add, { ...attrs, "opencode.change.type": "added" })
+        instruments.fileChanges.add(add, { ...attrs, ...emailAttrs, "opencode.change.type": "added" })
       }
       if (del > 0) {
-        instruments.fileChanges.add(del, { ...attrs, "opencode.change.type": "removed" })
+        instruments.fileChanges.add(del, { ...attrs, ...emailAttrs, "opencode.change.type": "removed" })
       }
     }
     return totals
@@ -170,10 +172,10 @@ function recordFileChanges(
   if (language && language !== "unknown") attrs["code.language"] = language
 
   if (totals.additions > 0) {
-    instruments.fileChanges.add(totals.additions, { ...attrs, "opencode.change.type": "added" })
+    instruments.fileChanges.add(totals.additions, { ...attrs, ...emailAttrs, "opencode.change.type": "added" })
   }
   if (totals.deletions > 0) {
-    instruments.fileChanges.add(totals.deletions, { ...attrs, "opencode.change.type": "removed" })
+    instruments.fileChanges.add(totals.deletions, { ...attrs, ...emailAttrs, "opencode.change.type": "removed" })
   }
   return totals
 }
@@ -189,6 +191,7 @@ export function createToolExecuteHooks(deps: ToolExecuteHookDeps) {
     if (state.filteredTools.has(input.tool)) {
       instruments.toolInvocations.add(1, {
         "gen_ai.tool.name": truncate(input.tool),
+        ...(state.gitAuthor ? { "host.user.email": truncate(state.gitAuthor) } : {}),
       })
       return
     }
@@ -215,6 +218,7 @@ export function createToolExecuteHooks(deps: ToolExecuteHookDeps) {
 
     instruments.toolInvocations.add(1, {
       "gen_ai.tool.name": truncate(input.tool),
+      ...(state.gitAuthor ? { "host.user.email": truncate(state.gitAuthor) } : {}),
     })
   }
 
@@ -245,7 +249,7 @@ export function createToolExecuteHooks(deps: ToolExecuteHookDeps) {
           if (filepath) {
             entry.span.setAttribute("code.language", truncate(detectLanguage(filepath)))
           }
-          const totals = recordFileChanges(instruments, input.tool, meta, input.args)
+          const totals = recordFileChanges(instruments, input.tool, meta, input.args, state.gitAuthor)
           if (totals.additions > 0) {
             entry.span.setAttribute("opencode.file.additions", totals.additions)
           }
@@ -271,6 +275,9 @@ export function createToolExecuteHooks(deps: ToolExecuteHookDeps) {
       }
       if (state.currentBranch) {
         attrs["vcs.repository.ref.name"] = truncate(state.currentBranch)
+      }
+      if (state.gitAuthor) {
+        attrs["host.user.email"] = truncate(state.gitAuthor)
       }
       instruments.vcsOperations.add(1, attrs)
     }

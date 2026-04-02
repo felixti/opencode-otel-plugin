@@ -69,7 +69,9 @@ export function createEventHook(deps: EventHookDeps) {
         const session = state.sessionSpans.get(sessionID)
         if (session) session.lastActivityAt = Date.now()
         startCompactionSpan(tracer, sessionID, session?.context, state.currentBranch, state.gitAuthor, state.repoUrl)
-        instruments.compactionCount.add(1, {})
+        instruments.compactionCount.add(1, {
+          ...(state.gitAuthor ? { "host.user.email": truncate(state.gitAuthor) } : {}),
+        })
         break
       }
 
