@@ -1,3 +1,9 @@
+## [0.9.0](https://github.com/felixti/opencode-otel-plugin/compare/v0.8.0...v0.9.0) (2026-04-02)
+
+### Features
+
+* **telemetry:** add host.user.email resource attribute from git config ([3cb25ba](https://github.com/felixti/opencode-otel-plugin/commit/3cb25ba5a9d598fd5e4f47bd0dda8808032609de))
+
 ## [0.8.0](https://github.com/felixti/opencode-otel-plugin/compare/v0.7.0...v0.8.0) (2026-03-30)
 
 ### Features
