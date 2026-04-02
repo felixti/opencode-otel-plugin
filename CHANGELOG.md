@@ -1,3 +1,9 @@
+## [0.10.0](https://github.com/felixti/opencode-otel-plugin/compare/v0.9.0...v0.10.0) (2026-04-02)
+
+### Features
+
+* **metrics:** add host.user.email to all user-facing metric instruments ([3482f1d](https://github.com/felixti/opencode-otel-plugin/commit/3482f1da5a3d49b74ca2ebb40bbe7e5ec53fbcc7))
+
 ## [0.9.0](https://github.com/felixti/opencode-otel-plugin/compare/v0.8.0...v0.9.0) (2026-04-02)
 
 ### Features
