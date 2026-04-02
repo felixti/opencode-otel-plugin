@@ -135,3 +135,7 @@ Some event types are handled **directly in `src/index.ts`** rather than routed t
 - **Release**: semantic-release with conventional commits → npm publish + GitHub release + CHANGELOG.md commit
 - **Git hooks**: husky — `pre-commit` (typecheck), `pre-push` (test + build), `commit-msg` (commitlint)
 - **No linter config** — no ESLint/Prettier/Biome configured at project level
+
+## Documentation
+
+- **Before committing**: check if README.md needs updating (new attributes, metrics, configuration options, etc.)

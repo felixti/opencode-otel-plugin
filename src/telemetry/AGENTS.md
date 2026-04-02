@@ -9,7 +9,7 @@ OTel SDK initialization — resource creation, provider setup, and graceful shut
 - `buildResourceAttributes(input: ResourceInput)` → returns a plain `Record<string, string>` of resource attributes. Uses `ATTR_SERVICE_NAME` and `ATTR_HOST_NAME` from semantic conventions.
 - `createResource(input: ResourceInput)` → wraps `buildResourceAttributes` with `resourceFromAttributes()` (OTel SDK v2 API).
 
-Resource attributes: `service.name` ("opencode"), `host.name`, `enduser.id`, `opencode.project.name`, `vcs.repository.url.full`, `vcs.repository.ref.name`, `opencode.worktree`, `opencode.directory`.
+Resource attributes: `service.name` ("opencode"), `host.name`, `host.user.email`, `enduser.id`, `opencode.project.name`, `vcs.repository.url.full`, `vcs.repository.ref.name`, `opencode.worktree`, `opencode.directory`.
 
 **Note**: Resource is immutable after creation. Dynamic values like `service.version` and branch updates are set as span attributes on active spans, not on the resource.
 

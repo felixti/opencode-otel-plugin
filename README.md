@@ -325,6 +325,7 @@ Attached to all exported signals (traces and metrics), identifying the session e
 |---|---|---|
 | `service.name` | string | Always `"opencode"` |
 | `host.name` | string | Machine hostname |
+| `host.user.email` | string | Git user email (`git config user.email`) |
 | `enduser.id` | string | Git author email (`git config user.email`) |
 | `opencode.project.name` | string | Project identifier from OpenCode |
 | `vcs.repository.url.full` | string | Git remote URL |
