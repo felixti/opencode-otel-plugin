@@ -1,3 +1,9 @@
+## [0.10.1](https://github.com/felixti/opencode-otel-plugin/compare/v0.10.0...v0.10.1) (2026-05-11)
+
+### Bug Fixes
+
+* **index:** await git metadata before Resource creation to ensure host.user.email is populated ([8933473](https://github.com/felixti/opencode-otel-plugin/commit/89334738a2faf308415cbbb4fd781ca0d4837fe3))
+
 ## [0.10.0](https://github.com/felixti/opencode-otel-plugin/compare/v0.9.0...v0.10.0) (2026-04-02)
 
 ### Features
