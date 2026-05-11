@@ -39,16 +39,29 @@ export const OpenCodeOtelPlugin: Plugin = async ({ project, $, directory, worktr
   let state: PluginState
 
   try {
-    // M6: non-blocking init — git metadata arrives async, set on spans later
+    // M6: collect git metadata before Resource creation — metrics need user identity as a dimension
+    const GIT_INIT_TIMEOUT_MS = 1000
+
+    const [author, repoUrl, branch] = await Promise.race([
+      Promise.all([
+        getGitAuthor($),
+        getRepoUrl($),
+        getCurrentBranch($),
+      ]),
+      new Promise<[string, string, string]>((_, reject) =>
+        setTimeout(() => reject(new Error("git-init-timeout")), GIT_INIT_TIMEOUT_MS)
+      ),
+    ]).catch(() => ["", "", ""] as [string, string, string])
+
     const hostname = getHostname()
 
     const resource = createResource({
-      author: "",
+      author: author || "",
       hostname,
-      email: "",
+      email: author || "",
       projectName: project.id ?? "",
-      repoUrl: "",
-      branch: "",
+      repoUrl: repoUrl || "",
+      branch: branch || "",
       worktree,
       directory,
     })
@@ -62,22 +75,17 @@ export const OpenCodeOtelPlugin: Plugin = async ({ project, $, directory, worktr
       sessionSpans: new Map(),
       toolSpans: new Map(),
       pendingChatRequests: new Map(),
-      currentBranch: undefined,
+      currentBranch: branch || undefined,
       opencodeVersion: undefined,
-      gitAuthor: undefined,
-      repoUrl: undefined,
+      gitAuthor: author || undefined,
+      repoUrl: repoUrl || undefined,
       gitReady: RESOLVED,
       filteredTools: parseFilteredTools(),
     }
 
-    state.gitReady = Promise.all([
-      getGitAuthor($),
-      getRepoUrl($),
-      getCurrentBranch($),
-    ]).then(([author, repoUrl, branch]) => {
-      state.currentBranch = branch || undefined
-      state.gitAuthor = author || undefined
-      state.repoUrl = repoUrl || undefined
+    // gitReady resolves immediately since metadata is already available;
+    // kept for compatibility with hooks that await it before creating spans
+    state.gitReady = Promise.resolve().then(() => {
       for (const session of state.sessionSpans.values()) {
         if (author) session.span.setAttribute("enduser.id", truncate(author))
         if (author) session.span.setAttribute("host.user.email", truncate(author))
@@ -90,7 +98,7 @@ export const OpenCodeOtelPlugin: Plugin = async ({ project, $, directory, worktr
         if (repoUrl) entry.span.setAttribute("vcs.repository.url.full", truncate(repoUrl))
         if (branch) entry.span.setAttribute("vcs.repository.ref.name", truncate(branch))
       }
-    }).catch(() => {})
+    })
 
     // C1: TTL sweeper — evicts abandoned sessions and truly orphaned children
     const sweepTimer = setInterval(() => {
