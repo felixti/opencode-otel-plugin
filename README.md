@@ -212,6 +212,7 @@ Created on `chat.params` hook, ended when the assistant message arrives with tok
 | `gen_ai.operation.name` | string | Always `"chat"` |
 | `gen_ai.request.model` | string | Model ID sent in the request (e.g., `claude-sonnet-4-20250514`) |
 | `gen_ai.provider.name` | string | Provider identifier (e.g., `anthropic`, `openai`) |
+| `gen_ai.agent.name` | string | OpenCode agent or subagent name |
 | `gen_ai.conversation.id` | string | OpenCode session ID |
 | `vcs.repository.ref.name` | string | Current git branch |
 | `enduser.id` | string | Git author email |
@@ -231,6 +232,7 @@ Created on `tool.execute.before`, ended on `tool.execute.after`. Includes flatte
 | `gen_ai.operation.name` | string | Always `"execute_tool"` |
 | `gen_ai.tool.name` | string | Tool name (e.g., `edit`, `write`, `bash`, `glob`) |
 | `gen_ai.tool.call.id` | string | Unique tool call identifier |
+| `gen_ai.agent.name` | string | OpenCode agent or subagent name |
 | `gen_ai.conversation.id` | string | OpenCode session ID |
 | `vcs.repository.ref.name` | string | Current git branch |
 | `enduser.id` | string | Git author email |
@@ -247,6 +249,7 @@ Created as an instant span when OpenCode compacts the conversation context.
 
 | Attribute | Type | Description |
 |---|---|---|
+| `gen_ai.agent.name` | string | OpenCode agent or subagent name |
 | `gen_ai.conversation.id` | string | OpenCode session ID |
 | `vcs.repository.ref.name` | string | Current git branch |
 | `enduser.id` | string | Git author email |
