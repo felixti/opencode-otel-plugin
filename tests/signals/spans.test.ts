@@ -39,6 +39,16 @@ describe("startSessionSpan", () => {
     expect(spans[0].attributes["gen_ai.agent.name"]).toBe("opencode")
     expect(spans[0].attributes["gen_ai.conversation.id"]).toBe("sess_123")
   })
+
+  test("uses the supplied agent name", () => {
+    const tracer = trace.getTracer("test")
+    const { span } = startSessionSpan(tracer, "sess_123", "reviewer")
+    span.end()
+
+    const sessionSpan = exporter.getFinishedSpans()[0]
+    expect(sessionSpan.attributes["gen_ai.agent.name"]).toBe("reviewer")
+    expect(sessionSpan.attributes["gen_ai.conversation.id"]).toBe("sess_123")
+  })
 })
 
 describe("startChatSpan", () => {
@@ -48,6 +58,7 @@ describe("startChatSpan", () => {
       model: "gpt-4",
       provider: "openai",
       sessionID: "sess_123",
+      agentName: "reviewer",
     })
     span.end()
 
@@ -59,6 +70,7 @@ describe("startChatSpan", () => {
     expect(chatSpan!.attributes["gen_ai.provider.name"]).toBe("openai")
     expect(chatSpan!.attributes["gen_ai.request.model"]).toBe("gpt-4")
     expect(chatSpan!.attributes["gen_ai.conversation.id"]).toBe("sess_123")
+    expect(chatSpan!.attributes["gen_ai.agent.name"]).toBe("reviewer")
   })
 })
 
@@ -69,6 +81,7 @@ describe("startToolSpan", () => {
       toolName: "read",
       callID: "call_1",
       sessionID: "sess_123",
+      agentName: "reviewer",
     })
     span.end()
 
@@ -80,6 +93,7 @@ describe("startToolSpan", () => {
     expect(toolSpan!.attributes["gen_ai.tool.name"]).toBe("read")
     expect(toolSpan!.attributes["gen_ai.tool.call.id"]).toBe("call_1")
     expect(toolSpan!.attributes["gen_ai.conversation.id"]).toBe("sess_123")
+    expect(toolSpan!.attributes["gen_ai.agent.name"]).toBe("reviewer")
   })
 })
 
@@ -93,6 +107,7 @@ describe("startCompactionSpan", () => {
     const compSpan = spans.find((s) => s.name === "session_compaction")
     expect(compSpan).toBeDefined()
     expect(compSpan!.attributes["gen_ai.conversation.id"]).toBe("sess_123")
+    expect(compSpan!.attributes["gen_ai.agent.name"]).toBe("opencode")
     expect(compSpan!.attributes["gen_ai.operation.name"]).toBeUndefined()
   })
 })

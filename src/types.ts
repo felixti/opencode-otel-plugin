@@ -8,6 +8,7 @@ export interface SessionSpanState {
   span: Span
   context: Context
   sessionID: string
+  agentName?: string
   requestCount: number
   lastActivityAt: number
 }
@@ -16,6 +17,7 @@ export interface SessionSpanState {
 export interface ChatRequestInfo {
   model: string
   provider: string
+  agentName: string
   startTime: number
 }
 
