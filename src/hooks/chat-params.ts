@@ -20,6 +20,7 @@ export function createChatParamsHook(deps: ChatParamsHookDeps) {
     const modelID = input.model?.id ?? input.model?.modelID ?? "unknown"
     const providerID = input.provider?.id ?? input.provider?.providerID ?? "unknown"
     const sessionID = input.sessionID
+    const agentName = input.agent || "opencode"
 
     await state.gitReady
     const session = state.sessionSpans.get(sessionID)
@@ -27,14 +28,21 @@ export function createChatParamsHook(deps: ChatParamsHookDeps) {
       model: modelID,
       provider: providerID,
       sessionID,
+      agentName,
       branch: state.currentBranch,
     }, session?.context)
 
     state.pendingChatRequests.set(sessionID, {
       model: modelID,
       provider: providerID,
+      agentName,
       startTime: Date.now(),
     })
+
+    if (session) {
+      session.agentName = agentName
+      session.span.setAttribute("gen_ai.agent.name", truncate(agentName))
+    }
 
     if (state.gitAuthor) span.setAttribute("enduser.id", truncate(state.gitAuthor))
     if (state.gitAuthor) span.setAttribute("host.user.email", truncate(state.gitAuthor))

@@ -203,6 +203,7 @@ export function createToolExecuteHooks(deps: ToolExecuteHookDeps) {
       toolName: input.tool,
       callID: input.callID,
       sessionID: input.sessionID,
+      agentName: session?.agentName,
       branch: state.currentBranch,
     }, session?.context)
 

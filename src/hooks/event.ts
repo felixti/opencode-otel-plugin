@@ -36,7 +36,14 @@ export function createEventHook(deps: EventHookDeps) {
         if (state.repoUrl) {
           span.setAttribute("vcs.repository.url.full", truncate(state.repoUrl))
         }
-        state.sessionSpans.set(sessionID, { span, context, sessionID, requestCount: 0, lastActivityAt: Date.now() })
+        state.sessionSpans.set(sessionID, {
+          span,
+          context,
+          sessionID,
+          agentName: "opencode",
+          requestCount: 0,
+          lastActivityAt: Date.now(),
+        })
         break
       }
 
@@ -68,7 +75,15 @@ export function createEventHook(deps: EventHookDeps) {
         await state.gitReady
         const session = state.sessionSpans.get(sessionID)
         if (session) session.lastActivityAt = Date.now()
-        startCompactionSpan(tracer, sessionID, session?.context, state.currentBranch, state.gitAuthor, state.repoUrl)
+        startCompactionSpan(
+          tracer,
+          sessionID,
+          session?.context,
+          state.currentBranch,
+          state.gitAuthor,
+          state.repoUrl,
+          session?.agentName,
+        )
         instruments.compactionCount.add(1, {
           ...(state.gitAuthor ? { "host.user.email": truncate(state.gitAuthor) } : {}),
         })
