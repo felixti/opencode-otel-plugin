@@ -35,6 +35,10 @@
   "bugs": {
     "url": "https://github.com/felixti/opencode-otel-plugin/issues"
   },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "peerDependencies": {
     "@opencode-ai/plugin": ">=0.1.0"
   },
