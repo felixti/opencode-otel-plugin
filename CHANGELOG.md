@@ -1,3 +1,9 @@
+## [0.11.1](https://github.com/felixti/opencode-otel-plugin/compare/v0.11.0...v0.11.1) (2026-08-07)
+
+### Bug Fixes
+
+* **ci:** publish to npm via OIDC trusted publishing instead of NPM_TOKEN ([0e296da](https://github.com/felixti/opencode-otel-plugin/commit/0e296dae0b2831021e50beb09a043d427310c839))
+
 ## [0.11.0](https://github.com/felixti/opencode-otel-plugin/compare/v0.10.1...v0.11.0) (2026-08-07)
 
 ### Features
