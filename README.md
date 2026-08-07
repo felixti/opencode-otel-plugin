@@ -387,6 +387,19 @@ bun run typecheck    # tsc --noEmit
 bun run build        # dist/index.js + dist/index.d.ts
 ```
 
+### Releasing
+
+Publishing is fully automated by [semantic-release](https://semantic-release.gitbook.io/) on every push to `main` (see `.github/workflows/release.yml`).
+
+| Commit type | Release |
+|---|---|
+| `feat:` | minor (`0.X.0`) |
+| `fix:` | patch (`0.0.X`) |
+| `BREAKING CHANGE` / `feat!:` | major |
+| `chore:`, `ci:`, `docs:`, merges | **no release** |
+
+Manual edits to the `version` field in `package.json` do not publish a package. Always use conventional commit messages for user-facing changes so CI can cut the GitHub release and npm publish.
+
 ## License
 
 MIT
