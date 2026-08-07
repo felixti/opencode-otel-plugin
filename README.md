@@ -400,6 +400,8 @@ Publishing is fully automated by [semantic-release](https://semantic-release.git
 
 Manual edits to the `version` field in `package.json` do not publish a package. Always use conventional commit messages for user-facing changes so CI can cut the GitHub release and npm publish.
 
+npm publishing uses [trusted publishing (OIDC)](https://docs.npmjs.com/trusted-publishers) — no `NPM_TOKEN` secret is required. The workflow requests `id-token: write` and publishes with provenance (`publishConfig.provenance` in `package.json`). For this to work, the package on npmjs.com must have this repository's `main` branch release workflow configured as a trusted publisher.
+
 ## License
 
 MIT
