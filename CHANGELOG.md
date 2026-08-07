@@ -1,3 +1,9 @@
+## [0.11.0](https://github.com/felixti/opencode-otel-plugin/compare/v0.10.1...v0.11.0) (2026-08-07)
+
+### Features
+
+* add agent and conversation id span attributes ([8e2d246](https://github.com/felixti/opencode-otel-plugin/commit/8e2d246e54fa8e7f6f8d1f326d27d135e8a9bdf1))
+
 ## [0.10.1](https://github.com/felixti/opencode-otel-plugin/compare/v0.10.0...v0.10.1) (2026-05-11)
 
 ### Bug Fixes
