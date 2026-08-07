@@ -133,6 +133,9 @@ Some event types are handled **directly in `src/index.ts`** rather than routed t
 - **Build**: `bun build ./src/index.ts --outdir dist --target bun --minify` + `tsc --emitDeclarationOnly`
 - **CI**: `.github/workflows/release.yml` — push to `main` triggers: typecheck → test → build → `semantic-release`
 - **Release**: semantic-release with conventional commits → npm publish + GitHub release + CHANGELOG.md commit
+  - Only `feat:`, `fix:`, and breaking changes (`!` / `BREAKING CHANGE`) create a release
+  - `chore:`, `ci:`, `docs:`, merge commits, and manual `package.json` version bumps do **not** publish
+  - The next version is computed from commits since the last git tag — do not bump `package.json` by hand
 - **Git hooks**: husky — `pre-commit` (typecheck), `pre-push` (test + build), `commit-msg` (commitlint)
 - **No linter config** — no ESLint/Prettier/Biome configured at project level
 
